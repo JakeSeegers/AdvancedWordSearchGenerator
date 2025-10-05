@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Word Search Generator</title>
+    <title>Offline Word Search Generator</title>
     <style>
         body {
             font-family: 'Courier New', monospace;
             margin: 20px;
-            background: #f5f5f5;
+            background: #f5f5ff;
         }
         
         .container {
@@ -157,18 +157,6 @@
             border-top: 4px solid #d32f2f;
         }
         
-        .current-theme {
-            text-align: center;
-            margin: 20px 0;
-            padding: 15px;
-            background: #e8f5e8;
-            border: 2px solid #28a745;
-            border-radius: 8px;
-            color: #2e7d2e;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        
         .puzzle-content {
             display: flex;
             gap: 30px;
@@ -229,6 +217,27 @@
             align-self: stretch; /* Make it same height as grid in flex container */
         }
         
+        /* MODIFIED: Styles for the relocated title/level indicator */
+        .current-theme {
+            text-align: center;
+            margin: -10px -10px 15px -10px; /* Adjust margin to fit nicely */
+            padding: 15px;
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            border-radius: 4px 4px 0 0; /* Rounded top corners */
+            color: #2e7d2e;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        #difficultyDisplay {
+            margin-bottom: 20px;
+            margin-top: -15px; /* Pull it closer to the title */
+            font-size: 14px;
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
         .words-list h3 {
             margin-top: 0;
             color: #d32f2f;
@@ -285,9 +294,7 @@
             display: none;
         }
         
-        /* MODIFIED: PRINT STYLES */
         @media print {
-            /* NEW: Defines page size and orientation */
             @page {
                 size: landscape;
                 margin: 0.5in;
@@ -317,21 +324,8 @@
                 border-top: none;
             }
             
-            .current-theme {
-                background: none !important;
-                color: black !important;
-                border: none;
-                border-bottom: 2px solid black;
-                font-size: 18pt;
-                text-align: left;
-                padding: 0 0 10px 0;
-                border-radius: 0;
-            }
+            .stats { text-align: left; font-size: 10pt; margin: 0 0 10px 0; }
             
-            #difficultyDisplay { display: none !important; }
-            .stats { text-align: left; font-size: 10pt; }
-            
-            /* MODIFIED: Use flexbox for page layout */
             .puzzle-content {
                 display: flex;
                 flex-direction: row;
@@ -341,16 +335,14 @@
                 width: 100%;
             }
             
-            /* MODIFIED: Grid container takes up proportional space */
             .grid-container {
-                flex: 3; /* Grid takes more space */
+                flex: 3;
             }
             
-            /* MODIFIED: Make the grid responsive to the page size */
             .grid {
-                width: 100% !important; /* Override JS inline style */
-                height: auto !important; /* Override JS inline style */
-                aspect-ratio: 1 / 1;    /* Keep it square */
+                width: 100% !important;
+                height: auto !important;
+                aspect-ratio: 1 / 1;
                 border: 2px solid black;
                 margin: 0;
                 padding: 10px;
@@ -369,18 +361,44 @@
                 border: 1px dotted black !important;
             }
             
-            /* MODIFIED: Word list takes up proportional space */
+            /* MODIFIED: Ensure the word list container and its contents do not break across pages */
             .words-list {
-                flex: 1; /* Word list takes less space */
+                flex: 1;
                 border: 2px solid black;
                 background: white !important;
                 padding: 15px;
                 align-self: stretch;
+                page-break-inside: avoid; /* This is the key change */
+            }
+            
+            /* MODIFIED: Styles for relocated title/level in print mode */
+            .current-theme, #difficultyDisplay {
+                background: none !important;
+                color: black !important;
+                border: none;
+                text-align: left;
+                padding: 0;
+                margin: 0 0 5px 0;
+                border-radius: 0;
+            }
+            .current-theme {
+                font-size: 16pt;
+                font-weight: bold;
+                border-bottom: 2px solid black;
+                padding-bottom: 5px;
+                margin-bottom: 10px;
+            }
+            #difficultyDisplay {
+                font-size: 11pt;
+                font-style: italic;
+                font-weight: normal;
+                border: none !important;
             }
 
             .words-list h3 {
                 border-bottom: 1px solid black;
-                font-size: 14pt; /* Fixed size for print heading */
+                font-size: 14pt;
+                padding-top: 5px;
             }
             
             .word-item, .word-item.found {
@@ -398,7 +416,6 @@
         
         <div class="settings-section hidden-for-print" id="settingsSection">
             <h3>⚙️ Settings & Word List</h3>
-            
             <div class="settings-row">
                 <div class="settings-column">
                     <div class="word-input-section">
@@ -433,15 +450,15 @@ OYSTER</textarea>
                 
                 <div class="settings-column">
                     <div class="setting-group">
-                        <label>Difficulty Level:</label>
+                        <label>Level:</label>
                         <input type="range" class="slider" id="difficultySlider" min="1" max="5" value="3">
-                        <div class="setting-value" id="difficultyValue">Level 3: Medium</div>
+                        <div class="setting-value" id="difficultyValue">Level 3: Standard Dynamic</div>
                         <div style="font-size: 12px; color: #666; margin-top: 8px; line-height: 1.4;">
-                            <strong>Level One:</strong> Arial only, 20×20, no wobble (5x Size)<br>
-                            <strong>Level Two:</strong> + Times New Roman, 25×25 (4x Size)<br>
-                            <strong>Level Three:</strong> + Courier New, 30×30 (3x Size)<br>
-                            <strong>Level Four:</strong> + Comic Sans, 35×35 (2x Size)<br>
-                            <strong>Level Five:</strong> + Papyrus, 40×40, max chaos (1x Size)
+                            <strong>Level One:</strong> Arial, 20×20, no wobble, 5x Size<br>
+                            <strong>Level Two:</strong> + Times New Roman, 25×25, 4x Size<br>
+                            <strong>Level Three:</strong> + Courier New, 30×30, 3x Size<br>
+                            <strong>Level Four:</strong> + Comic Sans, 35×35, 2x Size<br>
+                            <strong>Level Five:</strong> + Papyrus, 40×40, 1x Size
                         </div>
                     </div>
                     
@@ -461,9 +478,6 @@ OYSTER</textarea>
         </div>
         
         <div class="puzzle-section" style="display: none;" id="puzzleSection">
-            <div id="currentTheme" class="current-theme">My Custom Puzzle</div>
-            <div id="difficultyDisplay" class="current-theme" style="background: #fff3cd; border-color: #ffc107; color: #856404;">Level Three: Medium</div>
-            
             <div class="controls">
                 <button id="revealBtn" onclick="toggleReveal()">Reveal All Words</button>
                 <button onclick="toggleSettings()" style="background: #ff9800;">📄 Hide Settings for Print</button>
@@ -481,6 +495,9 @@ OYSTER</textarea>
                 </div>
                 
                 <div class="words-list" id="wordsListContainer">
+                    <div id="currentTheme" class="current-theme">My Custom Puzzle</div>
+                    <div id="difficultyDisplay" class="current-theme">Level Three: Standard Dynamic</div>
+                    
                     <h3>Find These Words:</h3>
                     <div class="word-list" id="wordsList"></div>
                 </div>
@@ -503,12 +520,13 @@ OYSTER</textarea>
             5: ['Arial', 'Times New Roman', 'Courier New', 'Comic Sans MS', 'Papyrus']
         };
         
+        // MODIFIED: Replaced difficulty names with neutral, descriptive terms
         const difficultySettings = {
-            1: { gridSize: 20, wobble: 0, decoys: 0, name: 'Very Easy', nameWord: 'Level One', scaleMultiplier: 5 },
-            2: { gridSize: 25, wobble: 4, decoys: 15, name: 'Easy', nameWord: 'Level Two', scaleMultiplier: 4 },
-            3: { gridSize: 30, wobble: 8, decoys: 35, name: 'Medium', nameWord: 'Level Three', scaleMultiplier: 3 },
-            4: { gridSize: 35, wobble: 12, decoys: 70, name: 'Hard', nameWord: 'Level Four', scaleMultiplier: 2 },
-            5: { gridSize: 40, wobble: 15, decoys: 100, name: 'Extreme', nameWord: 'Level Five', scaleMultiplier: 1 }
+            1: { gridSize: 20, wobble: 0, decoys: 0, name: 'Classic Static', nameWord: 'Level One', scaleMultiplier: 5 },
+            2: { gridSize: 25, wobble: 4, decoys: 15, name: 'Slightly Dynamic', nameWord: 'Level Two', scaleMultiplier: 4 },
+            3: { gridSize: 30, wobble: 8, decoys: 35, name: 'Standard Dynamic', nameWord: 'Level Three', scaleMultiplier: 3 },
+            4: { gridSize: 35, wobble: 12, decoys: 70, name: 'Highly Dynamic', nameWord: 'Level Four', scaleMultiplier: 2 },
+            5: { gridSize: 40, wobble: 15, decoys: 100, name: 'Maximum Chaos', nameWord: 'Level Five', scaleMultiplier: 1 }
         };
         
         const directions = [
@@ -668,7 +686,7 @@ OYSTER</textarea>
                 }
             }
             if (retryCount === maxRetries) {
-                alert(`⚠️ Could only place ${placedWords.length}/${userWords.length} words after ${maxRetries} attempts. Try using a higher difficulty level for a larger grid.`);
+                alert(`⚠️ Could only place ${placedWords.length}/${userWords.length} words after ${maxRetries} attempts. Try using a higher grid size setting.`);
             }
             fillEmptySpaces();
             renderGrid();
@@ -726,14 +744,11 @@ OYSTER</textarea>
             }
         }
         
-        // MODIFIED: This function now scales the word list elements
         function renderWordList() {
             const settings = getSettings();
             const container = document.getElementById('wordsList');
             const mainContainer = document.getElementById('wordsListContainer');
             container.innerHTML = '';
-
-            // --- Define base sizes for the word list ---
             const BASE_FONT_SIZE = 12;
             const BASE_PADDING_Y = 4;
             const BASE_PADDING_X = 8;
@@ -741,25 +756,18 @@ OYSTER</textarea>
             const BASE_GAP = 8;
             const BASE_H3_FONT_SIZE = 20;
             const BASE_MAX_WIDTH = 400;
-
-            // --- Apply scaled styles to containers ---
-            // Use Math.sqrt on multiplier to prevent it from getting too wide on screen
             mainContainer.style.maxWidth = `${BASE_MAX_WIDTH * Math.sqrt(settings.scaleMultiplier)}px`;
             mainContainer.querySelector('h3').style.fontSize = `${BASE_H3_FONT_SIZE * Math.sqrt(settings.scaleMultiplier)}px`;
             container.style.gap = `${BASE_GAP * settings.scaleMultiplier}px`;
-
             const placedWordStrings = placedWords.map(w => w.word);
             placedWordStrings.forEach(word => {
                 const wordElement = document.createElement('div');
                 wordElement.className = 'word-item';
                 wordElement.textContent = word;
                 wordElement.dataset.word = word;
-                
-                // --- Apply scaled styles to each word item ---
                 wordElement.style.fontSize = `${BASE_FONT_SIZE * settings.scaleMultiplier}px`;
                 wordElement.style.padding = `${BASE_PADDING_Y * settings.scaleMultiplier}px ${BASE_PADDING_X * settings.scaleMultiplier}px`;
                 wordElement.style.borderRadius = `${BASE_RADIUS * settings.scaleMultiplier}px`;
-
                 container.appendChild(wordElement);
             });
         }
