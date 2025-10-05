@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Word Search Generator</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #d32f2f;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .settings-section {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 8px;
+            border: 2px solid #d32f2f;
+            margin-bottom: 40px;
+        }
+        
+        .settings-section h3 {
+            color: #d32f2f;
+            margin-top: 0;
+            border-bottom: 2px solid #d32f2f;
+            padding-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        .settings-row {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .settings-column {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .word-input-section {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .word-input-section h4 {
+            margin: 0 0 15px 0;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .setting-group {
+            margin-bottom: 20px;
+        }
+        
+        .setting-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .slider {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .setting-value {
+            font-size: 14px;
+            color: #666;
+            background: #fff;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #b71c1c;
+        }
+        
+        .generate-button {
+            background: #28a745;
+            font-size: 18px;
+            padding: 15px 30px;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .generate-button:hover {
+            background: #218838;
+        }
+        
+        /* PUZZLE SECTION */
+        .puzzle-section {
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 4px solid #d32f2f;
+        }
+        
+        .current-theme {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            color: #2e7d2e;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .puzzle-content {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .grid {
+            position: relative;
+            /* DYNAMICALLY SET: width: 800px; */
+            /* DYNAMICALLY SET: height: 800px; */
+            background: #f8f8f8;
+            border: 3px solid #333;
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+        
+        .cell {
+            position: absolute;
+            /* MODIFIED: Width and height are now set by JavaScript */
+            /* width: 18px; */
+            /* height: 18px; */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.7);
+        }
+        
+        .cell:hover {
+            background: rgba(227, 242, 253, 0.9);
+            transform: rotate(0deg) scale(1.2);
+            z-index: 10;
+        }
+        
+        .cell.highlighted {
+            background: rgba(255, 235, 59, 0.9) !important;
+            color: #d32f2f;
+            transform: rotate(0deg) scale(1.1);
+            z-index: 5;
+            border: 2px solid #ff9800;
+        }
+        
+        .words-list {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            max-width: 400px;
+        }
+        
+        .words-list h3 {
+            margin-top: 0;
+            color: #d32f2f;
+            border-bottom: 2px solid #d32f2f;
+            padding-bottom: 8px;
+            font-size: 20px;
+        }
+        
+        .word-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 12px;
+        }
+        
+        .word-item {
+            background: #e0e0e0;
+            padding: 4px 8px;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+        
+        .word-item.found {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .stats {
+            text-align: center;
+            margin: 15px 0;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .info-text {
+            font-size: 12px;
+            color: #856404;
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        
+        .hidden-for-print {
+            display: block;
+        }
+        
+        .hidden-for-print.hide {
+            display: none;
+        }
+        
+        /* PRINT STYLES */
+        @media print {
+            body {
+                margin: 0;
+                padding: 15px;
+                background: white;
+                font-size: 12px;
+            }
+            
+            .container {
+                box-shadow: none;
+                max-width: none;
+                padding: 0;
+            }
+            
+            .hidden-for-print {
+                display: none !important;
+            }
+            
+            .settings-section {
+                display: none !important;
+            }
+            
+            h1, .subtitle {
+                display: none !important;
+            }
+            
+            .puzzle-section {
+                margin-top: 0;
+                padding-top: 0;
+                border-top: none;
+            }
+            
+            .current-theme {
+                background: #f0f0f0 !important;
+                color: black !important;
+                border: 1px solid black
