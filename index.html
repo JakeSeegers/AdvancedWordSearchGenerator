@@ -707,7 +707,9 @@ OYSTER</textarea>
             gridElement.innerHTML = '';
             const BASE_CELL_SIZE = 18;
             const BASE_FONT_SIZE = 9;
-            const scaledCellSize = BASE_CELL_SIZE * settings.scaleMultiplier;
+            // Add extra spacing based on wobble amount to prevent overlap
+            const wobbleSpacing = settings.wobble * 0.8;
+            const scaledCellSize = (BASE_CELL_SIZE + wobbleSpacing) * settings.scaleMultiplier;
             const totalGridPixelSize = (settings.gridSize * scaledCellSize);
             const padding = 30;
             gridElement.style.width = `${totalGridPixelSize + (padding * 2)}px`;
@@ -722,8 +724,8 @@ OYSTER</textarea>
                     cell.dataset.col = j;
                     const baseX = j * scaledCellSize;
                     const baseY = i * scaledCellSize;
-                    const offsetX = (Math.random() - 0.5) * settings.wobble * settings.scaleMultiplier;
-                    const offsetY = (Math.random() - 0.5) * settings.wobble * settings.scaleMultiplier;
+                    const offsetX = (Math.random() - 0.5) * settings.wobble * settings.scaleMultiplier * 0.5;
+                    const offsetY = (Math.random() - 0.5) * settings.wobble * settings.scaleMultiplier * 0.5;
                     const rotation = (Math.random() - 0.5) * settings.wobble;
                     const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
                     const randomSize = (BASE_FONT_SIZE + Math.random() * 4) * settings.scaleMultiplier;
