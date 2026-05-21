@@ -10,7 +10,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --ink:#1c1a16;--paper:#f7f4ee;--paper2:#f0ece2;--rule:#d4cbb8;
-  --gold:#b8922a;--green:#2a6642;--red:#8b2020;--muted:#7a7060;
+  --gold:#b8922a;--green:#2a6642;--red:#8b2020;--muted:#7a7060; 
   --serif:'Playfair Display',Georgia,serif;--body:'EB Garamond',Georgia,serif;
 }
 body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height:100vh}
@@ -110,7 +110,7 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .sunday-block p:last-child{margin-bottom:0}
 .sunday-block-title{font-family:var(--serif);font-size:12px;font-weight:600;color:#5a1a9a;margin-bottom:7px;letter-spacing:.2px}
 .sunday-example{color:#7060a0;font-size:10px;border-top:1px solid #ddd0f8;padding-top:6px;margin-top:4px}
-.eater{font-family:eater,Arial Narrow,sans-serif;font-weight:bold;font-size:12px;color:#111;font-style:normal}
+.fantasy{font-family:fantasy,Arial Narrow,sans-serif;font-weight:bold;font-size:12px;color:#111;font-style:normal}
 .csans{font-family:'Comic Sans MS','Chalkboard SE',cursive;font-size:11px;color:#111;font-style:normal}
 
 @media print{
@@ -161,9 +161,9 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
       oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
     <div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.6">
       This word never appears in the grid. Its letters (plus 2–4 extra full copies of the same set) are scattered in
-      <span style="font-family:eater,sans-serif;font-weight:bold;font-style:normal;color:var(--ink)">eater</span> font.
+      <span style="font-family:fantasy,sans-serif;font-weight:bold;font-style:normal;color:var(--ink)">fantasy</span> font.
       A separate count of <span style="font-family:'Comic Sans MS',cursive;font-style:normal;color:var(--ink)">Comic Sans</span>
-      letters tells solvers how many eater letters to pick. They collect those letters and unscramble the answer.
+      letters tells solvers how many fantasy letters to pick. They collect those letters and unscramble the answer.
     </div>
   </div>
 
@@ -462,21 +462,21 @@ function buildPuzzle() {
     }
   }
 
-  // Sunday secret word: scatter eater letters (answer + extra copies) and Comic Sans counting letters
+  // Sunday secret word: scatter fantasy letters (answer + extra copies) and Comic Sans counting letters
   var sundayMeta = null;
   if (diff.id === 7) {
     var rawSecret = document.getElementById('sundayWord').value.trim().toUpperCase().replace(/[^A-Z]/g, '');
     if (rawSecret.length >= 3) {
-      // Build the full set of eater letters: the real answer letters (shuffled)
+      // Build the full set of fantasy letters: the real answer letters (shuffled)
       // plus 2-4 extra complete copies — same letters, just more of them.
       // Solver uses Comic Sans count to know exactly how many to pick.
       var realLetters = rawSecret.split('').sort(function() { return Math.random() - 0.5; });
       var extraSets = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4 extra copies
-      var alleater = realLetters.slice();
+      var allfantasy = realLetters.slice();
       for (var es = 0; es < extraSets; es++) {
-        for (var el = 0; el < realLetters.length; el++) alleater.push(realLetters[el]);
+        for (var el = 0; el < realLetters.length; el++) allfantasy.push(realLetters[el]);
       }
-      alleater.sort(function() { return Math.random() - 0.5; });
+      allfantasy.sort(function() { return Math.random() - 0.5; });
 
       // Collect all grid positions and shuffle
       var allCells = [];
@@ -485,22 +485,22 @@ function buildPuzzle() {
 
       var usedIdx = 0;
 
-      // Plant eater letters — overwrite whatever filler is there
-      var eaterCells = {};
-      for (var ii2 = 0; ii2 < alleater.length && usedIdx < allCells.length; ii2++, usedIdx++) {
+      // Plant fantasy letters — overwrite whatever filler is there
+      var fantasyCells = {};
+      for (var ii2 = 0; ii2 < allfantasy.length && usedIdx < allCells.length; ii2++, usedIdx++) {
         var ic = allCells[usedIdx];
-        _grid[ic[0]][ic[1]] = alleater[ii2];
-        eaterCells[ic[0] + ',' + ic[1]] = alleater[ii2];
+        _grid[ic[0]][ic[1]] = allfantasy[ii2];
+        fantasyCells[ic[0] + ',' + ic[1]] = allfantasy[ii2];
       }
 
-      // Plant Comic Sans cells — exactly rawSecret.length of them, don't overlap with eater cells
+      // Plant Comic Sans cells — exactly rawSecret.length of them, don't overlap with fantasy cells
       var comicCells = {};
       for (var ki = 0; ki < rawSecret.length && usedIdx < allCells.length; ki++, usedIdx++) {
         var kc = allCells[usedIdx];
         comicCells[kc[0] + ',' + kc[1]] = true;
       }
 
-      sundayMeta = { word: rawSecret, eaterCells: eaterCells, comicCells: comicCells };
+      sundayMeta = { word: rawSecret, fantasyCells: fantasyCells, comicCells: comicCells };
     }
   }
 
@@ -533,8 +533,8 @@ function renderPuzzle() {
       }
       // Override font for Sunday secret cells
       if (isSunday && p.sundayMeta) {
-        if (p.sundayMeta.eaterCells[ck] !== undefined) {
-          font = 'eater, Arial Narrow, sans-serif';
+        if (p.sundayMeta.fantasyCells[ck] !== undefined) {
+          font = 'fantasy, Arial Narrow, sans-serif';
           bold = 'bold'; italic = 'normal'; cellFs = fs + 1;
         } else if (p.sundayMeta.comicCells[ck]) {
           font = "'Comic Sans MS', 'Chalkboard SE', cursive";
@@ -593,15 +593,15 @@ function renderPuzzle() {
           '<span class="csans">Comic Sans</span> font. ' +
           'That number is exactly how many letters long the secret answer is.</p>' +
         '<p><strong>Step 2 — Collect the letters:</strong> Find every letter printed in ' +
-          '<span class="eater">eater</span> font and write them down. ' +
-          'There are more eater letters than you need — extra full copies of the same set are mixed in to hide the count.</p>' +
-        '<p><strong>Step 3 — Unscramble:</strong> Using only as many eater letters as your Comic Sans count, ' +
-          'unscramble them to spell the secret word. The leftover eater letters are the extras — discard them.</p>' +
+          '<span class="fantasy">fantasy</span> font and write them down. ' +
+          'There are more fantasy letters than you need — extra full copies of the same set are mixed in to hide the count.</p>' +
+        '<p><strong>Step 3 — Unscramble:</strong> Using only as many fantasy letters as your Comic Sans count, ' +
+          'unscramble them to spell the secret word. The leftover fantasy letters are the extras — discard them.</p>' +
         '<p class="sunday-example"><em>Example: you count 5 <span class="csans">Comic Sans</span> letters, ' +
-          'so the answer is 5 letters long. The <span class="eater">eater</span> letters scattered in the grid are ' +
+          'so the answer is 5 letters long. The <span class="fantasy">fantasy</span> letters scattered in the grid are ' +
           'I, R, O, A, T, O, I, R, A, T, I, A, O, T, R — that are 15 letters, just 3 copies of the same 5 mixed up. ' +
           'Find a set of 5 that unscrambles into a real word: I, R, O, A, T → <strong>RATIO</strong>. ' +
-          'The other 10 eater letters are duplicates — ignore them once you have found your answer.</em></p>' +
+          'The other 10 fantasy letters are duplicates — ignore them once you have found your answer.</em></p>' +
       '</div>';
   }
 
