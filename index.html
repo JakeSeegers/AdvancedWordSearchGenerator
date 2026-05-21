@@ -1,834 +1,740 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Word Search Generator</title>
-    <style>
-        body {
-            font-family: 'Courier New', monospace;
-            margin: 20px;
-            background: #f5f5ff;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        h1 {
-            text-align: center;
-            color: #d32f2f;
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-style: italic;
-        }
-        
-        .settings-section {
-            background: #f9f9f9;
-            padding: 30px;
-            border-radius: 8px;
-            border: 2px solid #d32f2f;
-            margin-bottom: 40px;
-        }
-        
-        .settings-section h3 {
-            color: #d32f2f;
-            margin-top: 0;
-            border-bottom: 2px solid #d32f2f;
-            padding-bottom: 10px;
-            font-size: 24px;
-        }
-        
-        .settings-row {
-            display: flex;
-            gap: 40px;
-            flex-wrap: wrap;
-        }
-        
-        .settings-column {
-            flex: 1;
-            min-width: 300px;
-        }
-        
-        .word-input-section {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-        }
-        
-        .word-input-section h4 {
-            margin: 0 0 15px 0;
-            color: white;
-            font-size: 18px;
-        }
-        
-        .setting-group {
-            margin-bottom: 20px;
-        }
-        
-        .setting-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-            font-size: 16px;
-        }
-        
-        .slider {
-            width: 100%;
-            margin-bottom: 8px;
-        }
-        
-        .setting-value {
-            font-size: 14px;
-            color: #666;
-            background: #fff;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        
-        textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: 'Courier New', monospace;
-            margin-bottom: 10px;
-            min-height: 120px;
-            resize: vertical;
-        }
-        
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-        
-        button {
-            background: #d32f2f;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-            transition: background 0.3s;
-        }
-        
-        button:hover {
-            background: #b71c1c;
-        }
-        
-        .generate-button {
-            background: #28a745;
-            font-size: 18px;
-            padding: 15px 30px;
-            margin: 20px auto;
-            display: block;
-        }
-        
-        .generate-button:hover {
-            background: #218838;
-        }
-        
-        /* PUZZLE SECTION */
-        .puzzle-section {
-            margin-top: 40px;
-            padding-top: 40px;
-            border-top: 4px solid #d32f2f;
-        }
-        
-        .puzzle-content {
-            display: flex;
-            gap: 30px;
-            justify-content: center;
-            align-items: flex-start; /* Align to top */
-            flex-wrap: wrap;
-        }
-        
-        .grid-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .grid {
-            position: relative;
-            background: #f8f8f8;
-            border: 3px solid #333;
-            border-radius: 5px;
-            margin: 20px 0;
-            overflow: hidden;
-            padding: 30px;
-            box-sizing: border-box;
-        }
-        
-        .cell {
-            position: absolute;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: transparent;
-        }
-        
-        .cell:hover {
-            background: rgba(227, 242, 253, 0.9);
-            transform: rotate(0deg) scale(1.2);
-            z-index: 10;
-            border-radius: 50%;
-        }
-        
-        .cell.highlighted {
-            background: rgba(255, 235, 59, 0.9) !important;
-            color: #d32f2f;
-            transform: rotate(0deg) scale(1.1);
-            z-index: 5;
-            border: 2px solid #ff9800;
-            border-radius: 50%;
-        }
-        
-        .words-list {
-            background: #f9f9f9;
-            padding: 25px;
-            border-radius: 8px;
-            border: 2px solid #333;
-            max-width: 400px; /* Base size, will be scaled by JS */
-            align-self: stretch; /* Make it same height as grid in flex container */
-        }
-        
-        /* MODIFIED: Styles for the relocated title/level indicator */
-        .current-theme {
-            text-align: center;
-            margin: -10px -10px 15px -10px; /* Adjust margin to fit nicely */
-            padding: 15px;
-            background: #e8f5e8;
-            border: 2px solid #28a745;
-            border-radius: 4px 4px 0 0; /* Rounded top corners */
-            color: #2e7d2e;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        #difficultyDisplay {
-            margin-bottom: 20px;
-            margin-top: -15px; /* Pull it closer to the title */
-            font-size: 14px;
-            background: #fff3cd;
-            border-color: #ffc107;
-            color: #856404;
-        }
-        
-        .words-list h3 {
-            margin-top: 0;
-            color: #d32f2f;
-            border-bottom: 2px solid #d32f2f;
-            padding-bottom: 8px;
-            font-size: 20px; /* Base size, will be scaled by JS */
-        }
-        
-        .word-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px; /* Base size, will be scaled by JS */
-        }
-        
-        .word-item {
-            background: #e0e0e0;
-            padding: 4px 8px; /* Base size, will be scaled by JS */
-            border-radius: 12px; /* Base size, will be scaled by JS */
-            transition: all 0.3s;
-            font-size: 12px; /* Base size, will be scaled by JS */
-        }
-        
-        .word-item.found {
-            background: #4caf50;
-            color: white;
-        }
-        
-        .controls {
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        .stats {
-            text-align: center;
-            margin: 15px 0;
-            color: #666;
-            font-size: 16px;
-        }
-        
-        .info-text {
-            font-size: 12px;
-            color: #856404;
-            background: #fff3cd;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 8px;
-        }
-        
-        .hidden-for-print {
-            display: block;
-        }
-        
-        .hidden-for-print.hide {
-            display: none;
-        }
-        
-        @media print {
-            @page {
-                size: landscape;
-                margin: 0.5in;
-            }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Search Maker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
 
-            body {
-                margin: 0;
-                padding: 0;
-                background: white;
-                font-size: 10pt;
-            }
-            
-            .container {
-                box-shadow: none;
-                max-width: none;
-                padding: 0;
-                border: none;
-            }
-            
-            .hidden-for-print, .settings-section, h1, .subtitle, .controls, button {
-                display: none !important;
-            }
-            
-            .puzzle-section {
-                margin-top: 0;
-                padding-top: 0;
-                border-top: none;
-            }
-            
-            .stats { text-align: left; font-size: 10pt; margin: 0 0 10px 0; }
-            
-            .puzzle-content {
-                display: flex;
-                flex-direction: row;
-                gap: 0.5in;
-                align-items: flex-start;
-                page-break-inside: avoid;
-                width: 100%;
-            }
-            
-            .grid-container {
-                flex: 3;
-            }
-            
-            .grid {
-                width: 100% !important;
-                height: auto !important;
-                aspect-ratio: 1 / 1;
-                border: 2px solid black;
-                margin: 0;
-                padding: 10px;
-            }
-            
-            .cell {
-                background: white !important;
-                color: black !important;
-                transform: none !important;
-                border-radius: 0 !important;
-                opacity: 1 !important;
-            }
-            
-            .cell.highlighted {
-                background: #cccccc !important;
-                border: 1px dotted black !important;
-            }
-            
-            /* MODIFIED: Ensure the word list container and its contents do not break across pages */
-            .words-list {
-                flex: 1;
-                border: 2px solid black;
-                background: white !important;
-                padding: 15px;
-                align-self: stretch;
-                page-break-inside: avoid; /* This is the key change */
-            }
-            
-            /* MODIFIED: Styles for relocated title/level in print mode */
-            .current-theme, #difficultyDisplay {
-                background: none !important;
-                color: black !important;
-                border: none;
-                text-align: left;
-                padding: 0;
-                margin: 0 0 5px 0;
-                border-radius: 0;
-            }
-            .current-theme {
-                font-size: 16pt;
-                font-weight: bold;
-                border-bottom: 2px solid black;
-                padding-bottom: 5px;
-                margin-bottom: 10px;
-            }
-            #difficultyDisplay {
-                font-size: 11pt;
-                font-style: italic;
-                font-weight: normal;
-                border: none !important;
-            }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1c1a16;--paper:#f7f4ee;--paper2:#f0ece2;--rule:#d4cbb8;
+  --gold:#b8922a;--green:#2a6642;--red:#8b2020;--muted:#7a7060;
+  --serif:'Playfair Display',Georgia,serif;--body:'EB Garamond',Georgia,serif;
+}
+body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height:100vh}
 
-            .words-list h3 {
-                border-bottom: 1px solid black;
-                font-size: 14pt;
-                padding-top: 5px;
-            }
-            
-            .word-item, .word-item.found {
-                background: none !important;
-                color: black !important;
-                border: 1px solid #ccc;
-            }
-        }
-    </style>
+.app-header{background:var(--ink);color:var(--paper);padding:14px 28px;display:flex;align-items:baseline;gap:16px;border-bottom:3px solid var(--gold)}
+.app-header h1{font-family:var(--serif);font-size:22px;font-weight:400;letter-spacing:.5px}
+.app-header span{font-size:13px;color:#9a917e;font-style:italic}
+.app-body{display:flex;gap:0;min-height:calc(100vh - 57px)}
+
+.form-panel{width:390px;flex:0 0 390px;background:var(--paper2);border-right:1px solid var(--rule);display:flex;flex-direction:column;overflow-y:auto}
+.fp-section{padding:16px 20px;border-bottom:1px solid var(--rule)}
+.fp-label{font-family:var(--serif);font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.fp-label::after{content:'';flex:1;height:1px;background:var(--rule)}
+
+.theme-input{width:100%;padding:9px 12px;font-family:var(--serif);font-size:17px;font-weight:400;border:1.5px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);outline:none;transition:border-color .15s}
+.theme-input:focus{border-color:var(--gold)}
+.theme-input::placeholder{color:#bbb;font-weight:400;font-size:15px}
+
+.day-tabs{display:flex;gap:3px;flex-wrap:wrap}
+.daytab{padding:5px 10px;border-radius:4px;font-family:var(--body);font-size:12px;font-weight:500;border:1px solid var(--rule);background:#fff;color:var(--muted);cursor:pointer;transition:all .15s;user-select:none}
+.daytab:hover{border-color:#aaa;color:var(--ink)}
+.daytab.selected{color:#fff;border-color:transparent}
+.diff-desc{margin-top:9px;font-size:11px;font-style:italic;color:var(--muted);line-height:1.5;padding:6px 8px;background:#fff;border-radius:4px;border-left:2px solid var(--rule)}
+
+.setting-group label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;font-style:italic}
+.setting-group input[type=number]{width:80px;padding:6px 8px;font-family:var(--body);font-size:13px;border:1px solid var(--rule);border-radius:3px;background:#fff;color:var(--ink);outline:none}
+.setting-group input[type=number]:focus{border-color:var(--gold)}
+
+.word-entries{display:flex;flex-direction:column;gap:6px}
+.word-entry{display:flex;gap:6px;align-items:center;background:#fff;border:1px solid var(--rule);border-radius:4px;padding:6px 8px;transition:border-color .15s}
+.word-entry:focus-within{border-color:var(--gold)}
+.entry-num{font-size:10px;color:var(--muted);min-width:16px;text-align:right;font-style:italic}
+.word-entry input{font-family:'Courier New',monospace;font-size:13px;border:none;outline:none;color:var(--ink);background:transparent}
+.word-entry input.w-word{text-transform:uppercase;font-weight:700;color:var(--green)}
+/* clue column — hidden on no-clue days */
+.word-entry input.w-clue{flex:1;font-family:var(--body);font-size:12px;font-style:italic;border-left:1px solid var(--rule);padding-left:8px}
+.word-entry input.w-clue::placeholder{color:#ccc;font-style:italic}
+.no-clue .w-word{width:100%}
+.no-clue .w-clue{display:none}
+.del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;transition:color .15s;flex-shrink:0}
+.del-btn:hover{color:var(--red)}
+.add-word-btn{margin-top:6px;padding:7px;width:100%;font-family:var(--body);font-size:12px;font-style:italic;background:transparent;border:1px dashed var(--rule);border-radius:4px;color:var(--muted);cursor:pointer;transition:all .15s}
+.add-word-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+.fakeout-hint{font-size:11px;color:var(--muted);font-style:italic;margin-bottom:7px;line-height:1.4}
+.fakeout-entries{display:flex;flex-direction:column;gap:5px}
+.fakeout-entry{display:flex;gap:6px;align-items:center;background:#fff;border:1px dashed #e8c97a;border-radius:4px;padding:5px 8px}
+.fakeout-entry input{font-family:'Courier New',monospace;font-size:13px;font-weight:700;border:none;outline:none;color:#856404;background:transparent;text-transform:uppercase;width:100%}
+
+.build-btn{margin:16px 20px;padding:13px;font-family:var(--serif);font-size:16px;font-weight:400;letter-spacing:.3px;background:var(--ink);color:var(--paper);border:none;border-radius:5px;cursor:pointer;transition:all .15s;border-bottom:3px solid var(--gold)}
+.build-btn:hover{background:#2e2c28;transform:translateY(-1px)}
+.build-btn:active{transform:translateY(0)}
+.error-msg{margin:0 20px 14px;padding:8px 12px;background:#fff5f5;border:1px solid #f5b8b8;border-radius:4px;font-size:12px;color:var(--red);display:none}
+.error-msg.show{display:block}
+
+.puzzle-panel{flex:1;overflow-y:auto;padding:28px 32px;display:flex;flex-direction:column;align-items:flex-start}
+.puzzle-placeholder{margin:auto;text-align:center;color:var(--rule);font-family:var(--serif);font-size:18px;font-style:italic;user-select:none}
+.puzzle-placeholder .big{font-size:64px;line-height:1;margin-bottom:16px;letter-spacing:4px}
+.print-toolbar{display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap}
+.pt-btn{padding:6px 14px;font-family:var(--body);font-size:13px;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);cursor:pointer;transition:all .15s}
+.pt-btn:hover{background:var(--paper2);border-color:var(--gold)}
+.pt-btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.pt-btn.primary:hover{background:#2e2c28}
+.pt-hint{font-size:11px;color:var(--muted);font-style:italic}
+
+.puzzle-page{background:#fff;border:1px solid var(--rule);box-shadow:3px 3px 12px rgba(0,0,0,.08);padding:28px 32px 24px;width:100%;max-width:980px}
+.page-header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:14px}
+.page-title{font-family:var(--serif);font-size:24px;font-weight:400}
+.page-meta{font-size:11px;color:#aaa;text-align:right;line-height:1.7;font-style:italic}
+.page-body{display:flex;gap:28px;align-items:flex-start}
+.grid-side{flex:0 0 auto}
+.grid-label{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:5px}
+.grid{display:inline-block;border:1.5px solid var(--ink);border-radius:2px;padding:3px;line-height:0;cursor:default}
+.grid-row{display:flex}
+.cell{display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;transition:background .1s}
+.cell:hover{background:rgba(184,146,42,.18)}
+.cell.found{background:rgba(184,146,42,.5);border-radius:50%}
+.cell.found-theme{background:rgba(42,102,66,.4);border-radius:50%}
+.words-side{flex:1}
+.sec-label{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee}
+.word-chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:11px;padding:3px 9px;border-radius:10px;background:#f1efe8;border:.5px solid #ccc;font-family:'Courier New',monospace;transition:all .25s}
+.chip.found-chip{background:#d4edda;color:#1a5c30;border-color:#a3d4b0;text-decoration:line-through}
+.clues-list{display:flex;flex-direction:column;gap:4px}
+.clue-item{padding:5px 8px;border-radius:3px;border-left:2px solid #e0dbd0;background:#faf9f7;line-height:1.5;font-size:12px;transition:all .2s}
+.clue-item.found-clue{border-left-color:var(--green);background:#f0faf4}
+.clue-item.fakeout-row{border-left-color:#e8c97a}
+.clue-num{color:#aaa;margin-right:3px;font-style:italic}
+.clue-letters{color:#ccc;margin-left:4px;font-size:10px}
+.clue-answer{font-family:'Courier New',monospace;color:var(--green);margin-top:3px;font-size:11px;display:none}
+.clue-item.revealed-clue .clue-answer{display:block}
+.bonus-note{font-size:11px;color:#2a5c3a;background:#f0faf4;border:.5px solid #a3d4b0;border-radius:3px;padding:6px 9px;margin-bottom:9px;line-height:1.5}
+.fakeout-note{font-size:11px;color:#7a5c20;background:#fffbf0;border:.5px solid #d4b870;border-radius:3px;padding:5px 8px;margin-bottom:9px;font-style:italic}
+.diff-badge{display:inline-flex;align-items:center;font-size:11px;padding:2px 8px;border-radius:8px;margin-left:8px;font-family:var(--body);font-style:italic;vertical-align:middle}
+.sunday-block{font-size:11px;color:#1a1040;background:#f3eeff;border:1px solid #c4a8e8;border-radius:4px;padding:10px 12px;margin-bottom:10px;line-height:1.7}
+.sunday-block p{margin:0 0 6px 0}
+.sunday-block p:last-child{margin-bottom:0}
+.sunday-block-title{font-family:var(--serif);font-size:12px;font-weight:600;color:#5a1a9a;margin-bottom:7px;letter-spacing:.2px}
+.sunday-example{color:#7060a0;font-size:10px;border-top:1px solid #ddd0f8;padding-top:6px;margin-top:4px}
+.impact{font-family:Impact,Arial Narrow,sans-serif;font-weight:bold;font-size:12px;color:#111;font-style:normal}
+.csans{font-family:'Comic Sans MS','Chalkboard SE',cursive;font-size:11px;color:#111;font-style:normal}
+
+@media print{
+  @page{size:landscape;margin:0}
+  body{background:#fff}
+  .app-header,.form-panel,.print-toolbar{display:none!important}
+  .puzzle-panel{padding:.25in .3in}
+  .puzzle-page{border:none;box-shadow:none;padding:0}
+  .cell:hover{background:none!important}
+  .cell.found,.cell.found-theme{background:rgba(150,150,150,.45)!important;border-radius:50%}
+  .clue-answer{display:none!important}
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="hidden-for-print"> ADVANCED WORD SEARCH GENERATOR </h1>
-        <p class="subtitle hidden-for-print">Create custom word search puzzles with your own words</p>
-        
-        <div class="settings-section hidden-for-print" id="settingsSection">
-            <h3>⚙️ Settings & Word List</h3>
-            <div class="settings-row">
-                <div class="settings-column">
-                    <div class="word-input-section">
-                        <h4>📝 Your Word List</h4>
-                        <input type="text" id="puzzleTitle" placeholder="Puzzle Title (e.g., 'Ocean Animals', 'Space Terms')" value="My Custom Puzzle">
-                        <textarea id="wordInput" placeholder="Enter your words, one per line or separated by commas:
-SHARK
-WHALE
-DOLPHIN
-OCTOPUS
-...or...
-SHARK, WHALE, DOLPHIN, OCTOPUS">SHARK
-WHALE
-DOLPHIN
-OCTOPUS
-CORAL
-REEF
-FISH
-CRAB
-SEAL
-STARFISH
-JELLYFISH
-SEAWEED
-TURTLE
-SHRIMP
-OYSTER</textarea>
-                        <div class="info-text">
-                            💡 Tip: Enter 10-50 words for best results. Mix of short and long words works great!
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="settings-column">
-                    <div class="setting-group">
-                        <label>Level:</label>
-                        <input type="range" class="slider" id="difficultySlider" min="1" max="5" value="3">
-                        <div class="setting-value" id="difficultyValue">Level 3: Standard Dynamic</div>
-                        <div style="font-size: 12px; color: #666; margin-top: 8px; line-height: 1.4;">
-                            <strong>Level One:</strong> Arial, 20×20, no wobble, 5x Size<br>
-                            <strong>Level Two:</strong> + Times New Roman, 25×25, 4x Size<br>
-                            <strong>Level Three:</strong> + Courier New, 30×30, 3x Size<br>
-                            <strong>Level Four:</strong> + Comic Sans, 35×35, 2x Size<br>
-                            <strong>Level Five:</strong> + Papyrus, 40×40, 1x Size
-                        </div>
-                    </div>
-                    
-                    <div class="setting-group" style="background: #f0f0f0; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                        <label style="margin-bottom: 15px;">Current Settings:</label>
-                        <div style="font-size: 14px; line-height: 1.8;">
-                            <strong>Fonts:</strong> <span id="currentFonts">Arial, Times New Roman, Courier New</span><br>
-                            <strong>Grid Size:</strong> <span id="currentGrid">30×30</span><br>
-                            <strong>Wobble:</strong> <span id="currentWobble">8°</span><br>
-                            <strong>Decoy Words:</strong> <span id="currentDecoys">35</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <button class="generate-button" onclick="generatePuzzle()">🔄 Generate Word Search Puzzle</button>
-        </div>
-        
-        <div class="puzzle-section" style="display: none;" id="puzzleSection">
-            <div class="controls">
-                <button id="revealBtn" onclick="toggleReveal()">Reveal All Words</button>
-                <button onclick="toggleSettings()" style="background: #ff9800;">📄 Hide Settings for Print</button>
-                <button onclick="window.print()" style="background: #6c757d;">🖨️ Print Puzzle</button>
-            </div>
-            
-            <div class="stats">
-                <span id="foundCount">0</span> of <span id="totalWords">15</span> words found
-                <br><small style="color: #d32f2f;">⚠️ Contains decoy words!</small>
-            </div>
-            
-            <div class="puzzle-content">
-                <div class="grid-container">
-                    <div class="grid" id="wordGrid"></div>
-                </div>
-                
-                <div class="words-list" id="wordsListContainer">
-                    <div id="currentTheme" class="current-theme">My Custom Puzzle</div>
-                    <div id="difficultyDisplay" class="current-theme">Level Three: Standard Dynamic</div>
-                    
-                    <h3>Find These Words:</h3>
-                    <div class="word-list" id="wordsList"></div>
-                </div>
-            </div>
-        </div>
+
+<div class="app-header">
+  <h1>Word Search Maker</h1>
+  <span>Jake's Daily Puzzle Maker</span>
+</div>
+
+<div class="app-body">
+<div class="form-panel">
+
+  <div class="fp-section">
+    <div class="fp-label">Theme / Title</div>
+    <input type="text" id="themeInput" class="theme-input" placeholder="e.g. Ancient Rome" maxlength="60">
+  </div>
+
+  <div class="fp-section">
+    <div class="fp-label">Difficulty</div>
+    <div class="day-tabs" id="diffTiers"></div>
+    <div class="diff-desc" id="diffDesc"></div>
+  </div>
+
+  <div class="fp-section" id="fakeoutSection" style="display:none">
+    <div class="fp-label">Fakeout Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(optional)</span></div>
+    <div class="fakeout-hint">Listed in the clue list but NOT in the grid — designed to mislead.</div>
+    <div class="fakeout-entries" id="fakeoutEntries"></div>
+    <button class="add-word-btn" onclick="addFakeoutRow()" style="border-color:#e8c97a;color:#856404">+ add fakeout word</button>
+  </div>
+
+  <div class="fp-section" id="sundaySection" style="display:none">
+    <div class="fp-label">Sunday Secret Word</div>
+    <input type="text" id="sundayWord" class="theme-input"
+      placeholder="e.g. DINOSAUR" maxlength="20"
+      style="font-size:15px;font-family:'Courier New',monospace;letter-spacing:2px;text-transform:uppercase"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+    <div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.6">
+      This word never appears in the grid. Its letters (plus 2–4 extra full copies of the same set) are scattered in
+      <span style="font-family:Impact,sans-serif;font-weight:bold;font-style:normal;color:var(--ink)">Impact</span> font.
+      A separate count of <span style="font-family:'Comic Sans MS',cursive;font-style:normal;color:var(--ink)">Comic Sans</span>
+      letters tells solvers how many Impact letters to pick. They collect those letters and unscramble the answer.
     </div>
-    <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script><script type='text/javascript'>kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'C0C6HVPI6');kofiwidget2.draw();</script> 
-    <script>
-        let GRID_SIZE = 30;
-        let grid = [];
-        let placedWords = [];
-        let revealMode = false;
-        let userWords = [];
-        
-        const difficultyFonts = {
-            1: ['Arial'],
-            2: ['Arial', 'Times New Roman'],
-            3: ['Arial', 'Times New Roman', 'Courier New'],
-            4: ['Arial', 'Times New Roman', 'Courier New', 'Comic Sans MS'],
-            5: ['Arial', 'Times New Roman', 'Courier New', 'Comic Sans MS', 'Papyrus']
-        };
-        
-        // MODIFIED: Replaced difficulty names with neutral, descriptive terms
-        const difficultySettings = {
-            1: { gridSize: 20, wobble: 0, decoys: 0, name: 'Classic Static', nameWord: 'Level One', scaleMultiplier: 5 },
-            2: { gridSize: 25, wobble: 4, decoys: 15, name: 'Slightly Dynamic', nameWord: 'Level Two', scaleMultiplier: 4 },
-            3: { gridSize: 30, wobble: 8, decoys: 35, name: 'Standard Dynamic', nameWord: 'Level Three', scaleMultiplier: 3 },
-            4: { gridSize: 35, wobble: 12, decoys: 70, name: 'Highly Dynamic', nameWord: 'Level Four', scaleMultiplier: 2 },
-            5: { gridSize: 40, wobble: 15, decoys: 100, name: 'Maximum Chaos', nameWord: 'Level Five', scaleMultiplier: 1 }
-        };
-        
-        const directions = [
-            [0, 1], [0, -1], [1, 0], [-1, 0],
-            [1, 1], [-1, -1], [1, -1], [-1, 1]
-        ];
-        
-        document.getElementById('difficultySlider').oninput = function() {
-            const level = parseInt(this.value);
-            updateDifficultyDisplay(level);
+  </div>
+
+  <div class="fp-section">
+    <div class="fp-label">Font</div>
+    <div class="setting-group">
+      <label>Grid font size (px)</label>
+      <input type="number" id="fontSize" value="13" min="9" max="22">
+    </div>
+  </div>
+
+  <div class="fp-section">
+    <div class="fp-label">Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(4–14 letters)</span></div>
+    <div class="word-entries" id="wordEntries"></div>
+    <button class="add-word-btn" onclick="addWordRow()">+ add another word</button>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+  <button class="build-btn" onclick="buildPuzzle()">Generate Puzzle →</button>
+
+</div>
+
+<div class="puzzle-panel" id="puzzlePanel">
+  <div class="puzzle-placeholder">
+    <div class="big">✦ ✦ ✦</div>
+    Fill in your words<br>and press <em>Generate Puzzle</em>
+  </div>
+</div>
+</div>
+
+<script>
+var DIFFS = [
+  {
+    id:1, name:'Monday', color:'#185fa5',
+    desc:'Classic word search — all 8 directions on a 15×15 grid. Plain word list, no tricks.',
+    dirs:8, wobble:0, bias:false, fonts:1, listMode:'words', fakeouts:false, hiddenTheme:false,
+    gridSize:15, cellSize:28, showClue:false
+  },
+  {
+    id:2, name:'Tuesday', color:'#0f6e56',
+    desc:'Word list is shown, but the theme title itself is secretly hidden in the grid as a bonus. Not listed anywhere — find it if you can.',
+    dirs:8, wobble:3, bias:false, fonts:1, listMode:'words', fakeouts:false, hiddenTheme:true,
+    gridSize:15, cellSize:28, showClue:false
+  },
+  {
+    id:3, name:'Wednesday', color:'#534ab7',
+    desc:'No word list — clues only. Solve each clue to discover what to search for, then find it in the grid.',
+    dirs:8, wobble:4, bias:false, fonts:1, listMode:'clues', fakeouts:false, hiddenTheme:false,
+    gridSize:15, cellSize:28, showClue:true
+  },
+  {
+    id:4, name:'Thursday', color:'#ba7517',
+    desc:'Clues plus fakeout words — some entries in the list don\'t exist in the grid at all. Spot the red herrings.',
+    dirs:8, wobble:6, bias:false, fonts:1, listMode:'clues', fakeouts:true, hiddenTheme:false,
+    gridSize:16, cellSize:26, showClue:true
+  },
+  {
+    id:5, name:'Friday', color:'#993556',
+    desc:'Clues, fakeouts, and filler letters biased toward letters from the real words — making camouflage much harder to see through. Two mixed fonts.',
+    dirs:8, wobble:7, bias:true, fonts:2, listMode:'clues', fakeouts:true, hiddenTheme:false,
+    gridSize:16, cellSize:26, showClue:true
+  },
+  {
+    id:6, name:'Saturday', color:'#3b6d11',
+    desc:'Three fonts, heavy wobble, maximum letter bias. The grid is visually exhausting to scan. Clues and fakeouts throughout.',
+    dirs:8, wobble:10, bias:true, fonts:3, listMode:'clues', fakeouts:true, hiddenTheme:false,
+    gridSize:17, cellSize:25, showClue:true
+  },
+  {
+    id:7, name:'Sunday', color:'#b03030',
+    desc:'Word list shown plus hidden theme bonus. Four fonts, wobble, letter bias. Also includes a font-based secret puzzle: a word you supply is encoded using two special fonts — collect and unscramble the clue letters to find it.',
+    dirs:8, wobble:12, bias:true, fonts:4, listMode:'words', fakeouts:false, hiddenTheme:true,
+    gridSize:18, cellSize:24, showClue:false
+  }
+];
+
+var FONT_SETS = [
+  ['Georgia'],
+  ['Georgia','Times New Roman'],
+  ['Georgia','Times New Roman','Palatino'],
+  ['Georgia','Times New Roman','Palatino','Book Antiqua']
+];
+
+var currentDiff = DIFFS[0];
+var puzzle = null;
+var foundWords = new Set();
+var isRevealed = false;
+
+function buildDiffUI() {
+  var c = document.getElementById('diffTiers');
+  for (var i = 0; i < DIFFS.length; i++) {
+    (function(d) {
+      var el = document.createElement('button');
+      el.className = 'daytab' + (d.id === 1 ? ' selected' : '');
+      el.dataset.d = String(d.id);
+      el.textContent = d.name;
+      el.onclick = function() { selectDiff(d.id); };
+      if (d.id === 1) { el.style.background = d.color; el.style.color = '#fff'; el.style.borderColor = 'transparent'; }
+      c.appendChild(el);
+    })(DIFFS[i]);
+  }
+  var dd = document.getElementById('diffDesc');
+  dd.textContent = DIFFS[0].desc;
+  dd.style.borderLeftColor = DIFFS[0].color;
+}
+
+function selectDiff(id) {
+  var found = null;
+  for (var i = 0; i < DIFFS.length; i++) { if (DIFFS[i].id === id) { found = DIFFS[i]; break; } }
+  currentDiff = found;
+
+  document.querySelectorAll('.daytab').forEach(function(el) {
+    var did = +el.dataset.d;
+    var d = null;
+    for (var i = 0; i < DIFFS.length; i++) { if (DIFFS[i].id === did) { d = DIFFS[i]; break; } }
+    var active = did === id;
+    el.classList.toggle('selected', active);
+    el.style.background = active ? d.color : '';
+    el.style.color = active ? '#fff' : '';
+    el.style.borderColor = active ? 'transparent' : '';
+  });
+
+  document.getElementById('diffDesc').textContent = currentDiff.desc;
+  document.getElementById('diffDesc').style.borderLeftColor = currentDiff.color;
+  document.getElementById('fakeoutSection').style.display = currentDiff.fakeouts ? 'block' : 'none';
+  document.getElementById('sundaySection').style.display = (currentDiff.id === 7) ? 'block' : 'none';
+
+  // Show/hide clue column on all existing rows
+  document.querySelectorAll('.word-entry').forEach(function(row) {
+    if (currentDiff.showClue) {
+      row.classList.remove('no-clue');
+    } else {
+      row.classList.add('no-clue');
+    }
+  });
+}
+
+function addWordRow(word, clue) {
+  word = word || ''; clue = clue || '';
+  var container = document.getElementById('wordEntries');
+  var n = container.children.length + 1;
+  var div = document.createElement('div');
+  div.className = 'word-entry' + (currentDiff.showClue ? '' : ' no-clue');
+  div.innerHTML =
+    '<span class="entry-num">' + n + '</span>' +
+    '<input class="w-word" type="text" maxlength="14" value="' + escHTML(word) + '" placeholder="WORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
+    '<input class="w-clue" type="text" maxlength="120" value="' + escHTML(clue) + '" placeholder="Clue text…">' +
+    '<button class="del-btn" onclick="removeRow(this)" title="Remove">×</button>';
+  container.appendChild(div);
+  renumberRows();
+}
+function removeRow(btn) { btn.closest('.word-entry').remove(); renumberRows(); }
+function renumberRows() {
+  document.querySelectorAll('.word-entry .entry-num').forEach(function(el, i) { el.textContent = i + 1; });
+}
+
+function addFakeoutRow(word) {
+  word = word || '';
+  var container = document.getElementById('fakeoutEntries');
+  var div = document.createElement('div');
+  div.className = 'fakeout-entry';
+  div.innerHTML =
+    '<input type="text" maxlength="14" value="' + escHTML(word) + '" placeholder="FAKEWORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
+    '<button class="del-btn" onclick="this.closest(\'.fakeout-entry\').remove()" title="Remove">×</button>';
+  container.appendChild(div);
+}
+
+function getWords() {
+  return Array.from(document.querySelectorAll('.word-entry')).map(function(row) {
+    return {
+      word: row.querySelector('.w-word').value.trim().toUpperCase(),
+      clue: row.querySelector('.w-clue').value.trim()
+    };
+  }).filter(function(w) { return w.word.length >= 3; });
+}
+function getFakeouts() {
+  return Array.from(document.querySelectorAll('.fakeout-entry input'))
+    .map(function(inp) { return inp.value.trim().toUpperCase(); })
+    .filter(function(w) { return w.length >= 3; });
+}
+
+function showError(msg) {
+  var el = document.getElementById('errorMsg');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 4500);
+}
+
+// ── Grid helpers (defined outside the retry loop to avoid hoisting bugs) ──
+var _G, _grid;
+function _okCell(w, r, c, dr, dc) {
+  for (var i = 0; i < w.length; i++) {
+    var nr = r + i * dr, nc = c + i * dc;
+    if (nr < 0 || nr >= _G || nc < 0 || nc >= _G) return false;
+    if (_grid[nr][nc] && _grid[nr][nc] !== w[i]) return false;
+  }
+  return true;
+}
+function _putWord(w, r, c, dr, dc) {
+  var pos = [];
+  for (var i = 0; i < w.length; i++) {
+    _grid[r + i * dr][c + i * dc] = w[i];
+    pos.push([r + i * dr, c + i * dc]);
+  }
+  return pos;
+}
+function _tryPlace(word, clue, isTheme, useDirs, all8) {
+  var dirs = isTheme ? all8 : useDirs;
+  var shuffled = dirs.slice().sort(function() { return Math.random() - 0.5; });
+  for (var a = 0; a < 1200; a++) {
+    var dir = shuffled[a % shuffled.length];
+    var r = Math.floor(Math.random() * _G);
+    var c = Math.floor(Math.random() * _G);
+    if (_okCell(word, r, c, dir[0], dir[1])) {
+      return { word: word, clue: clue || '', positions: _putWord(word, r, c, dir[0], dir[1]), found: false };
+    }
+  }
+  return null;
+}
+
+function buildPuzzle() {
+  var diff = currentDiff;
+  var theme = document.getElementById('themeInput').value.trim() || 'Word Search';
+  var G = diff.gridSize;
+  var cs = diff.cellSize;
+  var fs = parseInt(document.getElementById('fontSize').value) || 13;
+
+  var rawWords = getWords();
+  if (rawWords.length < 2) { showError('Please enter at least 2 words.'); return; }
+
+  var toolong = rawWords.filter(function(w) { return w.word.length > G - 2; });
+  if (toolong.length) { showError('"' + toolong[0].word + '" is too long for ' + diff.name + '\'s ' + G + '×' + G + ' grid.'); return; }
+
+  var fakeouts = diff.fakeouts
+    ? getFakeouts().filter(function(f) { return !rawWords.some(function(w) { return w.word === f; }); })
+    : [];
+
+  // Derive hidden theme word from title (letters only, up to 14 chars)
+  var themeWord = '';
+  if (diff.hiddenTheme) {
+    themeWord = theme.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 14);
+    if (themeWord.length < 3) themeWord = '';
+  }
+
+  var all8 = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[-1,-1],[1,-1],[-1,1]];
+  var useDirs = diff.dirs === 2 ? [[0,1],[1,0]] : all8;
+
+  var placed = null, placedTheme = null;
+
+  for (var attempt = 0; attempt < 20; attempt++) {
+    // Reset shared grid state
+    _G = G;
+    _grid = [];
+    for (var i = 0; i < G; i++) {
+      _grid.push([]);
+      for (var j = 0; j < G; j++) _grid[i].push('');
+    }
+
+    var tmpPlaced = [];
+    var sorted = rawWords.slice().sort(function(a, b) { return b.word.length - a.word.length; });
+    var allOk = true;
+
+    for (var wi = 0; wi < sorted.length; wi++) {
+      var result = _tryPlace(sorted[wi].word, sorted[wi].clue, false, useDirs, all8);
+      if (!result) { allOk = false; break; }
+      tmpPlaced.push(result);
+    }
+
+    if (!allOk) continue;
+
+    // Try to place hidden theme word (best effort — doesn't abort)
+    var tmpTheme = null;
+    if (themeWord && themeWord.length >= 3) {
+      tmpTheme = _tryPlace(themeWord, '', true, useDirs, all8);
+    }
+
+    placed = tmpPlaced;
+    placedTheme = tmpTheme;
+    break;
+  }
+
+  if (!placed || placed.length < rawWords.length) {
+    showError('Could not fit all words. Try a larger grid difficulty or shorter words.');
+    return;
+  }
+
+  // Fill empty cells
+  var alpha = 'EARIOTNSHLRUDCYMFWGPBVKJXQZ';
+  var fillPool = alpha;
+  if (diff.bias) {
+    var wordLetters = placed.map(function(p) { return p.word; }).join('');
+    fillPool = wordLetters + wordLetters + wordLetters + alpha;
+  }
+  for (var r = 0; r < G; r++) {
+    for (var c = 0; c < G; c++) {
+      if (!_grid[r][c]) _grid[r][c] = fillPool[Math.floor(Math.random() * fillPool.length)];
+    }
+  }
+
+  // Sunday secret word: scatter Impact letters (answer + extra copies) and Comic Sans counting letters
+  var sundayMeta = null;
+  if (diff.id === 7) {
+    var rawSecret = document.getElementById('sundayWord').value.trim().toUpperCase().replace(/[^A-Z]/g, '');
+    if (rawSecret.length >= 3) {
+      // Build the full set of Impact letters: the real answer letters (shuffled)
+      // plus 2-4 extra complete copies — same letters, just more of them.
+      // Solver uses Comic Sans count to know exactly how many to pick.
+      var realLetters = rawSecret.split('').sort(function() { return Math.random() - 0.5; });
+      var extraSets = 2 + Math.floor(Math.random() * 3); // 2, 3, or 4 extra copies
+      var allImpact = realLetters.slice();
+      for (var es = 0; es < extraSets; es++) {
+        for (var el = 0; el < realLetters.length; el++) allImpact.push(realLetters[el]);
+      }
+      allImpact.sort(function() { return Math.random() - 0.5; });
+
+      // Collect all grid positions and shuffle
+      var allCells = [];
+      for (var sr = 0; sr < G; sr++) for (var sc = 0; sc < G; sc++) allCells.push([sr, sc]);
+      allCells.sort(function() { return Math.random() - 0.5; });
+
+      var usedIdx = 0;
+
+      // Plant Impact letters — overwrite whatever filler is there
+      var impactCells = {};
+      for (var ii2 = 0; ii2 < allImpact.length && usedIdx < allCells.length; ii2++, usedIdx++) {
+        var ic = allCells[usedIdx];
+        _grid[ic[0]][ic[1]] = allImpact[ii2];
+        impactCells[ic[0] + ',' + ic[1]] = allImpact[ii2];
+      }
+
+      // Plant Comic Sans cells — exactly rawSecret.length of them, don't overlap with Impact cells
+      var comicCells = {};
+      for (var ki = 0; ki < rawSecret.length && usedIdx < allCells.length; ki++, usedIdx++) {
+        var kc = allCells[usedIdx];
+        comicCells[kc[0] + ',' + kc[1]] = true;
+      }
+
+      sundayMeta = { word: rawSecret, impactCells: impactCells, comicCells: comicCells };
+    }
+  }
+
+  puzzle = { theme: theme, G: G, grid: _grid, placed: placed, placedTheme: placedTheme, themeWord: themeWord, fakeouts: fakeouts, diff: diff, cs: cs, fs: fs, sundayMeta: sundayMeta };
+  foundWords = new Set();
+  isRevealed = false;
+  renderPuzzle();
+}
+
+function renderPuzzle() {
+  var p = puzzle;
+  var diff = p.diff, G = p.G, grid = p.grid, placed = p.placed, cs = p.cs, fs = p.fs;
+  var fontSet = FONT_SETS[Math.min(diff.fonts - 1, FONT_SETS.length - 1)];
+  var isSunday = diff.id === 7;
+
+  var gHTML = '<div class="grid" id="mainGrid">';
+  for (var r = 0; r < G; r++) {
+    gHTML += '<div class="grid-row">';
+    for (var c = 0; c < G; c++) {
+      var ck = r + ',' + c;
+      var font = fontSet[Math.floor(Math.random() * fontSet.length)];
+      var wob = diff.wobble ? ((Math.random() - 0.5) * diff.wobble).toFixed(1) : 0;
+      var op = diff.wobble ? (0.62 + Math.random() * 0.38).toFixed(2) : 1;
+      var bold = diff.fonts > 1 && Math.random() > 0.55 ? 'bold' : 'normal';
+      var cellFs = fs;
+      var italic = '';
+      if (isSunday) {
+        cellFs = fs + Math.round((Math.random() - 0.5) * 4);
+        italic = Math.random() > 0.65 ? 'italic' : 'normal';
+      }
+      // Override font for Sunday secret cells
+      if (isSunday && p.sundayMeta) {
+        if (p.sundayMeta.impactCells[ck] !== undefined) {
+          font = 'Impact, Arial Narrow, sans-serif';
+          bold = 'bold'; italic = 'normal'; cellFs = fs + 1;
+        } else if (p.sundayMeta.comicCells[ck]) {
+          font = "'Comic Sans MS', 'Chalkboard SE', cursive";
+          italic = 'normal';
         }
-        
-        function updateDifficultyDisplay(level) {
-            const settings = difficultySettings[level];
-            const fonts = difficultyFonts[level];
-            
-            document.getElementById('difficultyValue').textContent = `${settings.nameWord}: ${settings.name}`;
-            document.getElementById('currentFonts').textContent = fonts.join(', ');
-            document.getElementById('currentGrid').textContent = `${settings.gridSize}×${settings.gridSize}`;
-            document.getElementById('currentWobble').textContent = `${settings.wobble}°`;
-            document.getElementById('currentDecoys').textContent = settings.decoys;
-        }
-        
-        function getSettings() {
-            const difficulty = parseInt(document.getElementById('difficultySlider').value);
-            const settings = difficultySettings[difficulty];
-            
-            return {
-                difficulty: difficulty,
-                wobble: settings.wobble,
-                fonts: difficultyFonts[difficulty],
-                gridSize: settings.gridSize,
-                decoyCount: settings.decoys,
-                opacityRange: 30,
-                scaleMultiplier: settings.scaleMultiplier
-            };
-        }
-        
-        function parseWordList() {
-            const input = document.getElementById('wordInput').value.trim();
-            if (!input) {
-                alert('Please enter some words first!');
-                return [];
-            }
-            let words = input.split(/[\n,]+/).map(w => w.trim().toUpperCase()).filter(w => w.length > 0);
-            words = [...new Set(words)];
-            if (words.length < 5) {
-                alert('Please enter at least 5 words!');
-                return [];
-            }
-            if (words.length > 100) {
-                alert('Too many words! Please enter 100 or fewer words.');
-                return [];
-            }
-            return words;
-        }
-        
-        function generateDecoyWords(realWords, count) {
-            const decoys = [];
-            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            realWords.forEach(word => {
-                if (decoys.length < count && word.length > 2) {
-                    const randomPos = Math.floor(Math.random() * word.length);
-                    const newLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
-                    const decoy = word.substring(0, randomPos) + newLetter + word.substring(randomPos + 1);
-                    if (!realWords.includes(decoy) && !decoys.includes(decoy)) decoys.push(decoy);
-                }
-                if (decoys.length < count && word.length > 3) {
-                    const decoy = word.slice(0, -1);
-                    if (!realWords.includes(decoy) && !decoys.includes(decoy)) decoys.push(decoy);
-                }
-            });
-            return decoys.slice(0, count);
-        }
-        
-        function initializeGrid() {
-            const settings = getSettings();
-            GRID_SIZE = settings.gridSize;
-            grid = [];
-            for (let i = 0; i < GRID_SIZE; i++) {
-                grid[i] = [];
-                for (let j = 0; j < GRID_SIZE; j++) {
-                    grid[i][j] = '';
-                }
-            }
-        }
-        
-        function canPlaceWord(word, row, col, direction) {
-            const [dr, dc] = direction;
-            for (let i = 0; i < word.length; i++) {
-                const newRow = row + i * dr;
-                const newCol = col + i * dc;
-                if (newRow < 0 || newRow >= GRID_SIZE || newCol < 0 || newCol >= GRID_SIZE) return false;
-                if (grid[newRow][newCol] !== '' && grid[newRow][newCol] !== word[i]) return false;
-            }
-            return true;
-        }
-        
-        function placeWord(word, row, col, direction, isRealWord = true) {
-            const [dr, dc] = direction;
-            const positions = [];
-            for (let i = 0; i < word.length; i++) {
-                const newRow = row + i * dr;
-                const newCol = col + i * dc;
-                grid[newRow][newCol] = word[i];
-                positions.push([newRow, newCol]);
-            }
-            if (isRealWord) {
-                placedWords.push({ word: word, positions: positions, found: false });
-            }
-        }
-        
-        function tryPlaceWord(word, isRealWord = true) {
-            const maxAttempts = 500;
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const direction = directions[Math.floor(Math.random() * directions.length)];
-                const row = Math.floor(Math.random() * GRID_SIZE);
-                const col = Math.floor(Math.random() * GRID_SIZE);
-                if (canPlaceWord(word, row, col, direction)) {
-                    placeWord(word, row, col, direction, isRealWord);
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-        function fillEmptySpaces() {
-            const commonLetters = 'EARIOTNSHLRUDCYMFWGPBVKJXQZ';
-            for (let i = 0; i < GRID_SIZE; i++) {
-                for (let j = 0; j < GRID_SIZE; j++) {
-                    if (grid[i][j] === '') {
-                        const weightedIndex = Math.floor(Math.random() * Math.random() * commonLetters.length);
-                        grid[i][j] = commonLetters[weightedIndex];
-                    }
-                }
-            }
-        }
-        
-        function generatePuzzle() {
-            userWords = parseWordList();
-            if (userWords.length === 0) return;
-            const settings = getSettings();
-            const maxRetries = 10;
-            let retryCount = 0;
-            while (retryCount < maxRetries) {
-                initializeGrid();
-                placedWords = [];
-                const sortedWords = [...userWords].sort((a, b) => b.length - a.length);
-                let successfulPlacements = 0;
-                sortedWords.forEach(word => { if (tryPlaceWord(word, true)) successfulPlacements++; });
-                if (successfulPlacements === sortedWords.length) {
-                    const decoyWords = generateDecoyWords(sortedWords, settings.decoyCount);
-                    decoyWords.forEach(decoy => tryPlaceWord(decoy, false));
-                    break; 
-                } else {
-                    retryCount++;
-                }
-            }
-            if (retryCount === maxRetries) {
-                alert(`⚠️ Could only place ${placedWords.length}/${userWords.length} words after ${maxRetries} attempts. Try using a higher grid size setting.`);
-            }
-            fillEmptySpaces();
-            renderGrid();
-            renderWordList();
-            updateStats();
-            const title = document.getElementById('puzzleTitle').value.trim() || 'My Custom Puzzle';
-            document.getElementById('currentTheme').textContent = title;
-            const diffSettings = difficultySettings[settings.difficulty];
-            document.getElementById('difficultyDisplay').textContent = `${diffSettings.nameWord}: ${diffSettings.name}`;
-            document.getElementById('puzzleSection').style.display = 'block';
-            document.getElementById('puzzleSection').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function renderGrid() {
-            const settings = getSettings();
-            const gridElement = document.getElementById('wordGrid');
-            gridElement.innerHTML = '';
-            const BASE_CELL_SIZE = 18;
-            const BASE_FONT_SIZE = 9;
-            // Add extra spacing based on wobble amount to prevent overlap
-            const wobbleSpacing = settings.wobble * 0.8;
-            const scaledCellSize = (BASE_CELL_SIZE + wobbleSpacing) * settings.scaleMultiplier;
-            const totalGridPixelSize = (settings.gridSize * scaledCellSize);
-            const padding = 30;
-            gridElement.style.width = `${totalGridPixelSize + (padding * 2)}px`;
-            gridElement.style.height = `${totalGridPixelSize + (padding * 2)}px`;
-            const fonts = settings.fonts;
-            for (let i = 0; i < GRID_SIZE; i++) {
-                for (let j = 0; j < GRID_SIZE; j++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    cell.textContent = grid[i][j];
-                    cell.dataset.row = i;
-                    cell.dataset.col = j;
-                    const baseX = j * scaledCellSize;
-                    const baseY = i * scaledCellSize;
-                    const offsetX = (Math.random() - 0.5) * settings.wobble * settings.scaleMultiplier * 0.5;
-                    const offsetY = (Math.random() - 0.5) * settings.wobble * settings.scaleMultiplier * 0.5;
-                    const rotation = (Math.random() - 0.5) * settings.wobble;
-                    const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
-                    const randomSize = (BASE_FONT_SIZE + Math.random() * 4) * settings.scaleMultiplier;
-                    const randomWeight = Math.random() > 0.6 ? 'bold' : 'normal';
-                    cell.style.width = `${scaledCellSize}px`;
-                    cell.style.height = `${scaledCellSize}px`;
-                    cell.style.left = `${baseX + offsetX}px`;
-                    cell.style.top = `${baseY + offsetY}px`;
-                    cell.style.transform = `rotate(${rotation}deg)`;
-                    cell.style.fontFamily = randomFont;
-                    cell.style.fontSize = `${randomSize}px`;
-                    cell.style.fontWeight = randomWeight;
-                    const minOpacity = (100 - settings.opacityRange) / 100;
-                    cell.style.opacity = minOpacity + Math.random() * (1 - minOpacity);
-                    const grayValue = Math.floor(20 + Math.random() * 40);
-                    cell.style.color = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
-                    gridElement.appendChild(cell);
-                }
-            }
-        }
-        
-        function renderWordList() {
-            const settings = getSettings();
-            const container = document.getElementById('wordsList');
-            const mainContainer = document.getElementById('wordsListContainer');
-            container.innerHTML = '';
-            const BASE_FONT_SIZE = 12;
-            const BASE_PADDING_Y = 4;
-            const BASE_PADDING_X = 8;
-            const BASE_RADIUS = 12;
-            const BASE_GAP = 8;
-            const BASE_H3_FONT_SIZE = 20;
-            const BASE_MAX_WIDTH = 400;
-            mainContainer.style.maxWidth = `${BASE_MAX_WIDTH * Math.sqrt(settings.scaleMultiplier)}px`;
-            mainContainer.querySelector('h3').style.fontSize = `${BASE_H3_FONT_SIZE * Math.sqrt(settings.scaleMultiplier)}px`;
-            container.style.gap = `${BASE_GAP * settings.scaleMultiplier}px`;
-            const placedWordStrings = placedWords.map(w => w.word);
-            placedWordStrings.forEach(word => {
-                const wordElement = document.createElement('div');
-                wordElement.className = 'word-item';
-                wordElement.textContent = word;
-                wordElement.dataset.word = word;
-                wordElement.style.fontSize = `${BASE_FONT_SIZE * settings.scaleMultiplier}px`;
-                wordElement.style.padding = `${BASE_PADDING_Y * settings.scaleMultiplier}px ${BASE_PADDING_X * settings.scaleMultiplier}px`;
-                wordElement.style.borderRadius = `${BASE_RADIUS * settings.scaleMultiplier}px`;
-                container.appendChild(wordElement);
-            });
-        }
-        
-        function toggleReveal() {
-            revealMode = !revealMode;
-            const btn = document.getElementById('revealBtn');
-            if (revealMode) {
-                btn.textContent = 'Hide Words';
-                highlightAllWords();
-            } else {
-                btn.textContent = 'Reveal All Words';
-                clearHighlights();
-            }
-        }
-        
-        function highlightAllWords() {
-            clearHighlights();
-            placedWords.forEach(wordObj => {
-                wordObj.positions.forEach(([row, col]) => {
-                    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-                    if (cell) cell.classList.add('highlighted');
-                });
-                const wordElement = document.querySelector(`[data-word="${wordObj.word}"]`);
-                if (wordElement) wordElement.classList.add('found');
-            });
-            updateStats();
-        }
-        
-        function clearHighlights() {
-            document.querySelectorAll('.cell.highlighted').forEach(c => c.classList.remove('highlighted'));
-            document.querySelectorAll('.word-item.found').forEach(i => i.classList.remove('found'));
-            placedWords.forEach(wordObj => { wordObj.found = false; });
-            updateStats();
-        }
-        
-        function updateStats() {
-            const foundCount = placedWords.filter(w => w.found).length;
-            const totalWords = placedWords.length;
-            document.getElementById('foundCount').textContent = revealMode ? totalWords : foundCount;
-            document.getElementById('totalWords').textContent = totalWords;
-        }
-        
-        function toggleSettings() {
-            const elements = document.querySelectorAll('.hidden-for-print');
-            const button = event.target;
-            elements.forEach(el => el.classList.toggle('hide'));
-            if (elements[0].classList.contains('hide')) {
-                button.textContent = '⚙️ Show Settings';
-                button.style.background = '#28a745';
-            } else {
-                button.textContent = '📄 Hide Settings for Print';
-                button.style.background = '#ff9800';
-            }
-        }
-        
-        // Initialize difficulty display
-        updateDifficultyDisplay(3);
-    </script>
+      }
+      var style = 'width:' + cs + 'px;height:' + cs + 'px;font-size:' + cellFs + 'px;font-family:' + font + ';font-weight:' + bold + ';transform:rotate(' + wob + 'deg);opacity:' + op;
+      if (isSunday) style += ';font-style:' + italic;
+      gHTML += '<div class="cell" data-r="' + r + '" data-c="' + c + '" style="' + style + '">' + grid[r][c] + '</div>';
+    }
+    gHTML += '</div>';
+  }
+  gHTML += '</div>';
+
+  var wHTML = '';
+  if (diff.listMode === 'words') {
+    wHTML = '<div class="sec-label">Find these words</div><div class="word-chips">';
+    for (var pi = 0; pi < placed.length; pi++) {
+      wHTML += '<span class="chip" id="chip-' + placed[pi].word + '">' + placed[pi].word + '</span>';
+    }
+    wHTML += '</div>';
+  } else if (diff.listMode === 'clues') {
+    var clueList = shuffle(
+      placed.map(function(pp) { return { word: pp.word, clue: pp.clue || '(' + pp.word.length + ' letters)', isFakeout: false }; }).concat(
+      p.fakeouts.map(function(w) { return { word: w, clue: '(' + w.length + ' letters)', isFakeout: true }; }))
+    );
+    wHTML = '<div class="sec-label">Clues</div><div class="clues-list">';
+    for (var ci = 0; ci < clueList.length; ci++) {
+      var item = clueList[ci];
+      var cls = item.isFakeout ? 'clue-item fakeout-row' : 'clue-item';
+      wHTML += '<div class="' + cls + '" id="ci-' + item.word + '"><span class="clue-num">' + (ci + 1) + '.</span> ' + escHTML(item.clue) + '<span class="clue-letters">' + item.word.length + ' ltrs</span><div class="clue-answer">→ ' + item.word + '</div></div>';
+    }
+    wHTML += '</div>';
+  }
+
+  var fakeoutNote = p.fakeouts.length && diff.listMode === 'clues'
+    ? '<div class="fakeout-note">' + p.fakeouts.length + ' fakeout word' + (p.fakeouts.length > 1 ? 's are' : ' is') + ' in the list but not in the grid.</div>' : '';
+
+  var bonusNote = '';
+  if (diff.hiddenTheme) {
+    if (p.placedTheme) {
+      bonusNote = '<div class="bonus-note" id="bonusNote">🔍 <strong>Bonus:</strong> the theme word is hidden somewhere in the grid — not listed here</div>';
+    } else {
+      bonusNote = '<div class="bonus-note">⚠ The theme title was too long to fit as a hidden word this time.</div>';
+    }
+  }
+
+  // Sunday secret puzzle instructions block
+  var sundayBlock = '';
+  if (diff.id === 7 && p.sundayMeta) {
+    sundayBlock =
+      '<div class="sunday-block">' +
+        '<div class="sunday-block-title">🔐 Secret Puzzle</div>' +
+        '<p>A secret word is encoded in this grid using two special fonts. The word itself never appears in the grid.</p>' +
+        '<p><strong>Step 1 — Find the length:</strong> Count every letter printed in ' +
+          '<span class="csans">Comic Sans</span> font. ' +
+          'That number is exactly how many letters long the secret answer is.</p>' +
+        '<p><strong>Step 2 — Collect the letters:</strong> Find every letter printed in ' +
+          '<span class="impact">Impact</span> font and write them down. ' +
+          'There are more Impact letters than you need — extra full copies of the same set are mixed in to hide the count.</p>' +
+        '<p><strong>Step 3 — Unscramble:</strong> Using only as many Impact letters as your Comic Sans count, ' +
+          'unscramble them to spell the secret word. The leftover Impact letters are the extras — discard them.</p>' +
+        '<p class="sunday-example"><em>Example: you count 5 <span class="csans">Comic Sans</span> letters, ' +
+          'so the answer is 5 letters long. The <span class="impact">Impact</span> letters scattered in the grid are ' +
+          'I, R, O, A, T, O, I, R, A, T, I, A, O, T, R — that are 15 letters, just 3 copies of the same 5 mixed up. ' +
+          'Find a set of 5 that unscrambles into a real word: I, R, O, A, T → <strong>RATIO</strong>. ' +
+          'The other 10 Impact letters are duplicates — ignore them once you have found your answer.</em></p>' +
+      '</div>';
+  }
+
+  var diffBadge = '<span class="diff-badge" style="color:' + diff.color + ';background:' + diff.color + '18;border:.5px solid ' + diff.color + '55">' + diff.name + '</span>';
+
+  var pageTitle = diff.hiddenTheme ? 'Word Search' : escHTML(p.theme);
+
+  document.getElementById('puzzlePanel').innerHTML =
+    '<div class="print-toolbar">' +
+      '<button class="pt-btn primary" onclick="window.print()">🖨 Print</button>' +
+      '<button class="pt-btn" onclick="toggleReveal()" id="revealBtn">Reveal all</button>' +
+      '<button class="pt-btn" onclick="resetFound()">Reset</button>' +
+      '<span class="pt-hint">Print → Landscape, 100%, no margins</span>' +
+    '</div>' +
+    '<div class="puzzle-page">' +
+      '<div class="page-header">' +
+        '<div class="page-title">' + pageTitle + ' ' + diffBadge + '</div>' +
+        '<div class="page-meta">' + G + '×' + G + ' · ' + placed.length + ' words · ' + diff.name + '</div>' +
+      '</div>' +
+      '<div class="page-body">' +
+        '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
+        '<div class="words-side">' + bonusNote + sundayBlock + fakeoutNote + wHTML + '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.querySelectorAll('.cell').forEach(function(cell) {
+    cell.addEventListener('click', function() { clickCell(cell); });
+  });
+}
+
+function clickCell(cell) {
+  if (!puzzle) return;
+  var r = +cell.dataset.r, c = +cell.dataset.c;
+  var hit = null;
+  for (var i = 0; i < puzzle.placed.length; i++) {
+    var pp = puzzle.placed[i];
+    if (foundWords.has(pp.word)) continue;
+    for (var j = 0; j < pp.positions.length; j++) {
+      if (pp.positions[j][0] === r && pp.positions[j][1] === c) { hit = pp; break; }
+    }
+    if (hit) break;
+  }
+  if (hit) {
+    for (var k = 0; k < hit.positions.length; k++) {
+      var el = document.querySelector('[data-r="' + hit.positions[k][0] + '"][data-c="' + hit.positions[k][1] + '"]');
+      if (el) el.classList.add('found');
+    }
+    foundWords.add(hit.word);
+    var ci = document.getElementById('ci-' + hit.word); if (ci) ci.classList.add('found-clue');
+    var ch = document.getElementById('chip-' + hit.word); if (ch) ch.classList.add('found-chip');
+    return;
+  }
+  // Hidden theme word
+  var pt = puzzle.placedTheme;
+  if (!pt || foundWords.has('__theme__')) return;
+  var onTheme = false;
+  for (var ti = 0; ti < pt.positions.length; ti++) {
+    if (pt.positions[ti][0] === r && pt.positions[ti][1] === c) { onTheme = true; break; }
+  }
+  if (onTheme) {
+    for (var tk = 0; tk < pt.positions.length; tk++) {
+      var te = document.querySelector('[data-r="' + pt.positions[tk][0] + '"][data-c="' + pt.positions[tk][1] + '"]');
+      if (te) te.classList.add('found-theme');
+    }
+    foundWords.add('__theme__');
+    var note = document.getElementById('bonusNote');
+    if (note) note.innerHTML = '✓ You found the hidden theme word: <strong>' + pt.word + '</strong>';
+  }
+}
+
+function toggleReveal() {
+  if (!puzzle) return;
+  isRevealed = !isRevealed;
+  var btn = document.getElementById('revealBtn');
+  if (btn) btn.textContent = isRevealed ? 'Hide' : 'Reveal all';
+  if (isRevealed) {
+    for (var i = 0; i < puzzle.placed.length; i++) {
+      var pp = puzzle.placed[i];
+      for (var j = 0; j < pp.positions.length; j++) {
+        var el = document.querySelector('[data-r="' + pp.positions[j][0] + '"][data-c="' + pp.positions[j][1] + '"]');
+        if (el) el.classList.add('found');
+      }
+      foundWords.add(pp.word);
+      var ci = document.getElementById('ci-' + pp.word); if (ci) ci.classList.add('found-clue', 'revealed-clue');
+      var ch = document.getElementById('chip-' + pp.word); if (ch) ch.classList.add('found-chip');
+    }
+    // Also reveal hidden theme word so the designer can verify placement
+    var pt = puzzle.placedTheme;
+    if (pt) {
+      for (var ti = 0; ti < pt.positions.length; ti++) {
+        var te = document.querySelector('[data-r="' + pt.positions[ti][0] + '"][data-c="' + pt.positions[ti][1] + '"]');
+        if (te) te.classList.add('found-theme');
+      }
+      var note = document.getElementById('bonusNote');
+      if (note) note.innerHTML = '\u{1F50D} <strong>Hidden word revealed:</strong> <span style="font-family:Courier New,monospace;font-weight:700">' + pt.word + '</span> — for proofing only.';
+    // Reveal Sunday secret word for proofing
+    if (puzzle.sundayMeta) {
+      var sb = document.querySelector('.sunday-block-title');
+      if (sb) sb.textContent = '\u{1F510} Secret answer: ' + puzzle.sundayMeta.word + ' (proofing — hidden when printed)';
+    }
+    }
+  } else {
+    resetFound();
+    document.querySelectorAll('.clue-item').forEach(function(el) { el.classList.remove('found-clue', 'revealed-clue'); });
+    var note = document.getElementById('bonusNote');
+    if (note && puzzle.placedTheme) note.innerHTML = '\u{1F50D} <strong>Bonus:</strong> the theme word is hidden somewhere in the grid — not listed here.';
+  }
+}
+
+function resetFound() {
+  if (!puzzle) return;
+  isRevealed = false;
+  var rb = document.getElementById('revealBtn'); if (rb) rb.textContent = 'Reveal all';
+  document.querySelectorAll('.cell.found').forEach(function(el) { el.classList.remove('found'); });
+  document.querySelectorAll('.cell.found-theme').forEach(function(el) { el.classList.remove('found-theme'); });
+  document.querySelectorAll('.found-chip').forEach(function(el) { el.classList.remove('found-chip'); });
+  document.querySelectorAll('.found-clue').forEach(function(el) { el.classList.remove('found-clue', 'revealed-clue'); });
+  foundWords = new Set();
+}
+
+function shuffle(a) {
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function escHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+buildDiffUI();
+for (var ii = 0; ii < 8; ii++) addWordRow();
+</script>
 </body>
 </html>
