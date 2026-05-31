@@ -478,9 +478,25 @@ function buildPuzzle() {
       }
       allfantasy.sort(function() { return Math.random() - 0.5; });
 
-      // Collect all grid positions and shuffle
+      // Collect grid positions that are NOT part of any placed word or the
+      // hidden theme word. The secret letters may only overwrite filler —
+      // stamping them over real answers corrupts/scrambles placed words and
+      // makes them unfindable (and breaks Reveal).
+      var occupied = {};
+      for (var op = 0; op < placed.length; op++) {
+        for (var oq = 0; oq < placed[op].positions.length; oq++) {
+          occupied[placed[op].positions[oq][0] + ',' + placed[op].positions[oq][1]] = true;
+        }
+      }
+      if (placedTheme) {
+        for (var ot = 0; ot < placedTheme.positions.length; ot++) {
+          occupied[placedTheme.positions[ot][0] + ',' + placedTheme.positions[ot][1]] = true;
+        }
+      }
       var allCells = [];
-      for (var sr = 0; sr < G; sr++) for (var sc = 0; sc < G; sc++) allCells.push([sr, sc]);
+      for (var sr = 0; sr < G; sr++) for (var sc = 0; sc < G; sc++) {
+        if (!occupied[sr + ',' + sc]) allCells.push([sr, sc]);
+      }
       allCells.sort(function() { return Math.random() - 0.5; });
 
       var usedIdx = 0;
