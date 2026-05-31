@@ -724,6 +724,11 @@ function toggleReveal() {
     document.querySelectorAll('.clue-item').forEach(function(el) { el.classList.remove('found-clue', 'revealed-clue'); });
     var note = document.getElementById('bonusNote');
     if (note && puzzle.placedTheme) note.innerHTML = '\u{1F50D} <strong>Bonus:</strong> the theme word is hidden somewhere in the grid — not listed here.';
+    // Re-hide the Sunday secret answer
+    if (puzzle.sundayMeta) {
+      var sb = document.querySelector('.sunday-block-title');
+      if (sb) sb.textContent = '\u{1F510} Secret Puzzle';
+    }
   }
 }
 
