@@ -176,7 +176,7 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
   </div>
 
   <div class="fp-section">
-    <div class="fp-label">Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(4–14 letters)</span></div>
+    <div class="fp-label">Words <span id="wordLenHint" style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(3–13 letters)</span></div>
     <div class="word-entries" id="wordEntries"></div>
     <button class="add-word-btn" onclick="addWordRow()">+ add another word</button>
   </div>
@@ -299,7 +299,18 @@ function selectDiff(id) {
       row.classList.add('no-clue');
     }
   });
+
+  // Word length cap scales with grid size — update inputs and hint
+  var maxLen = maxWordLen();
+  document.querySelectorAll('.w-word, .fakeout-entry input').forEach(function(inp) {
+    inp.maxLength = maxLen;
+    if (inp.value.length > maxLen) inp.value = inp.value.slice(0, maxLen);
+  });
+  var hint = document.getElementById('wordLenHint');
+  if (hint) hint.textContent = '(3–' + maxLen + ' letters)';
 }
+
+function maxWordLen() { return currentDiff.gridSize - 2; }
 
 function addWordRow(word, clue) {
   word = word || ''; clue = clue || '';
@@ -309,7 +320,7 @@ function addWordRow(word, clue) {
   div.className = 'word-entry' + (currentDiff.showClue ? '' : ' no-clue');
   div.innerHTML =
     '<span class="entry-num">' + n + '</span>' +
-    '<input class="w-word" type="text" maxlength="14" value="' + escHTML(word) + '" placeholder="WORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
+    '<input class="w-word" type="text" maxlength="' + maxWordLen() + '" value="' + escHTML(word) + '" placeholder="WORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
     '<input class="w-clue" type="text" maxlength="120" value="' + escHTML(clue) + '" placeholder="Clue text…">' +
     '<button class="del-btn" onclick="removeRow(this)" title="Remove">×</button>';
   container.appendChild(div);
@@ -326,7 +337,7 @@ function addFakeoutRow(word) {
   var div = document.createElement('div');
   div.className = 'fakeout-entry';
   div.innerHTML =
-    '<input type="text" maxlength="14" value="' + escHTML(word) + '" placeholder="FAKEWORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
+    '<input type="text" maxlength="' + maxWordLen() + '" value="' + escHTML(word) + '" placeholder="FAKEWORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
     '<button class="del-btn" onclick="this.closest(\'.fakeout-entry\').remove()" title="Remove">×</button>';
   container.appendChild(div);
 }
