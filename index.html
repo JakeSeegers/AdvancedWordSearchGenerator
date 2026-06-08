@@ -18,6 +18,9 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .app-header{background:var(--ink);color:var(--paper);padding:14px 28px;display:flex;align-items:baseline;gap:16px;border-bottom:3px solid var(--gold)}
 .app-header h1{font-family:var(--serif);font-size:22px;font-weight:400;letter-spacing:.5px}
 .app-header span{font-size:13px;color:#9a917e;font-style:italic}
+.hdr-actions{margin-left:auto;display:flex;gap:8px;align-self:center}
+.hdr-btn{font-family:var(--body);font-size:12px;color:var(--paper);background:transparent;border:1px solid #6b6453;border-radius:5px;padding:6px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.hdr-btn:hover{border-color:var(--gold);background:rgba(255,255,255,.07)}
 .app-body{display:flex;gap:0;min-height:calc(100vh - 57px)}
 
 .form-panel{width:390px;flex:0 0 390px;background:var(--paper2);border-right:1px solid var(--rule);display:flex;flex-direction:column;overflow-y:auto}
@@ -65,6 +68,7 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .build-btn:active{transform:translateY(0)}
 .error-msg{margin:0 20px 14px;padding:8px 12px;background:#fff5f5;border:1px solid #f5b8b8;border-radius:4px;font-size:12px;color:var(--red);display:none}
 .error-msg.show{display:block}
+.error-msg.ok{background:#f1faf2;border-color:#a9d8b4;color:#1f7a3d}
 
 .puzzle-panel{flex:1;overflow-y:auto;padding:28px 32px;display:flex;flex-direction:column;align-items:flex-start}
 .puzzle-placeholder{margin:auto;text-align:center;color:var(--rule);font-family:var(--serif);font-size:18px;font-style:italic;user-select:none}
@@ -132,6 +136,11 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 <div class="app-header">
   <h1>Word Search Maker</h1>
   <span>Jake's Daily Puzzle Maker</span>
+  <div class="hdr-actions">
+    <button class="hdr-btn" onclick="exportConfig()" title="Download the current day, theme, grid size, words and settings as a JSON file">⬇ Export JSON</button>
+    <button class="hdr-btn" onclick="document.getElementById('importFile').click()" title="Load a previously exported JSON file">⬆ Import JSON</button>
+    <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importConfig(this)">
+  </div>
 </div>
 
 <div class="app-body">
@@ -369,10 +378,89 @@ function getWords() {
     };
   }).filter(function(w) { return w.word.length >= 3; });
 }
-function showError(msg) {
+function showError(msg) { showFlash(msg, false); }
+function showFlash(msg, ok) {
   var el = document.getElementById('errorMsg');
-  el.textContent = msg; el.classList.add('show');
-  setTimeout(function() { el.classList.remove('show'); }, 4500);
+  el.textContent = msg;
+  el.classList.toggle('ok', !!ok);
+  el.classList.add('show');
+  clearTimeout(showFlash._t);
+  showFlash._t = setTimeout(function() { el.classList.remove('show'); }, 4500);
+}
+
+// ── Import / export of the whole form (day, theme, grid, font, words) ──────
+function gatherConfig() {
+  return {
+    app: 'word-search-maker',
+    version: 1,
+    day: currentDiff.id,
+    theme: document.getElementById('themeInput').value,
+    gridSize: getGridSize(),
+    fontSize: parseInt(document.getElementById('fontSize').value, 10) || 13,
+    sundayWord: document.getElementById('sundayWord').value,
+    words: Array.from(document.querySelectorAll('.word-entry')).map(function(row) {
+      return { word: row.querySelector('.w-word').value, clue: row.querySelector('.w-clue').value };
+    })
+  };
+}
+function exportConfig() {
+  var cfg = gatherConfig();
+  var slug = (cfg.theme || 'word-search').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'word-search';
+  var blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = slug + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  showFlash('Exported ' + cfg.words.filter(function(w) { return w.word.trim(); }).length + ' words and settings to ' + slug + '.json', true);
+}
+function importConfig(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try { applyConfig(JSON.parse(e.target.result)); }
+    catch (err) { showError('Could not read that file — it is not valid JSON.'); }
+    input.value = ''; // let the same file be re-imported later
+  };
+  reader.onerror = function() { showError('Could not read that file.'); input.value = ''; };
+  reader.readAsText(file);
+}
+function applyConfig(cfg) {
+  if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) { showError('That file does not contain puzzle settings.'); return; }
+
+  // Day first (this resets grid size to the day default — we override below)
+  var dayId = parseInt(cfg.day, 10);
+  if (DIFFS.some(function(x) { return x.id === dayId; })) selectDiff(dayId);
+
+  if (typeof cfg.theme === 'string') document.getElementById('themeInput').value = cfg.theme.slice(0, 60);
+  if (typeof cfg.sundayWord === 'string') {
+    document.getElementById('sundayWord').value = cfg.sundayWord.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 20);
+  }
+  var fsv = parseInt(cfg.fontSize, 10);
+  if (!isNaN(fsv)) document.getElementById('fontSize').value = Math.max(9, Math.min(22, fsv));
+
+  // Override grid size with the saved value, then re-sync caps/hint/echo
+  var gsv = parseInt(cfg.gridSize, 10);
+  if (!isNaN(gsv)) document.getElementById('gridSize').value = Math.max(11, Math.min(24, gsv));
+  applyGridSize();
+
+  if (Array.isArray(cfg.words)) {
+    document.getElementById('wordEntries').innerHTML = '';
+    var maxLen = getGridSize() - 2;
+    cfg.words.forEach(function(item) {
+      var word = '', clue = '';
+      if (typeof item === 'string') { word = item; }
+      else if (item && typeof item === 'object') { word = item.word || ''; clue = item.clue || ''; }
+      word = String(word).toUpperCase().replace(/[^A-Z]/g, '').slice(0, maxLen);
+      addWordRow(word, String(clue));
+    });
+    if (!document.querySelectorAll('.word-entry').length) addWordRow();
+    renumberRows();
+  }
+
+  var dayName = (DIFFS.filter(function(x) { return x.id === dayId; })[0] || currentDiff).name;
+  showFlash('Imported settings — ' + dayName + ', ' + getGridSize() + '×' + getGridSize() + ' grid.', true);
 }
 
 // ── Grid helpers (defined outside the retry loop to avoid hoisting bugs) ──
@@ -393,18 +481,49 @@ function _putWord(w, r, c, dr, dc) {
   }
   return pos;
 }
-function _tryPlace(word, clue, isTheme, useDirs, all8) {
-  var dirs = isTheme ? all8 : useDirs;
-  var shuffled = dirs.slice().sort(function() { return Math.random() - 0.5; });
-  for (var a = 0; a < 1200; a++) {
-    var dir = shuffled[a % shuffled.length];
-    var r = Math.floor(Math.random() * _G);
-    var c = Math.floor(Math.random() * _G);
-    if (_okCell(word, r, c, dir[0], dir[1])) {
-      return { word: word, clue: clue || '', positions: _putWord(word, r, c, dir[0], dir[1]), found: false };
+// Every valid start cell for a word of the given length in direction (dr,dc).
+function _dirStarts(len, dr, dc) {
+  var starts = [];
+  for (var r = 0; r < _G; r++) {
+    for (var c = 0; c < _G; c++) {
+      var er = r + (len - 1) * dr, ec = c + (len - 1) * dc;
+      if (er >= 0 && er < _G && ec >= 0 && ec < _G) starts.push([r, c]);
+    }
+  }
+  return starts;
+}
+// Try to seat a word in ONE direction, scanning every start cell in random
+// order. Returns the chosen start, or null if it can't fit that way anywhere.
+function _tryDir(word, dr, dc) {
+  var starts = shuffle(_dirStarts(word.length, dr, dc));
+  for (var i = 0; i < starts.length; i++) {
+    if (_okCell(word, starts[i][0], starts[i][1], dr, dc)) return starts[i];
+  }
+  return null;
+}
+// Place a word, strongly preferring primaryDir (its balanced assignment) and
+// only falling back to other directions if it genuinely can't fit that way.
+function _tryPlace(word, clue, dirs, primaryDir) {
+  var order = shuffle(dirs.slice());
+  if (primaryDir) {
+    order = order.filter(function(d) { return !(d[0] === primaryDir[0] && d[1] === primaryDir[1]); });
+    order.unshift(primaryDir);
+  }
+  for (var k = 0; k < order.length; k++) {
+    var s = _tryDir(word, order[k][0], order[k][1]);
+    if (s) {
+      return { word: word, clue: clue || '', positions: _putWord(word, s[0], s[1], order[k][0], order[k][1]), found: false, dir: order[k] };
     }
   }
   return null;
+}
+// Hand out direction assignments so all 8 are used as evenly as the word
+// count allows — this is what keeps a puzzle from going all-horizontal.
+function _balancedDirBag(n, dirs) {
+  var base = shuffle(dirs.slice());
+  var bag = [];
+  for (var i = 0; i < n; i++) bag.push(base[i % base.length]);
+  return shuffle(bag);
 }
 
 // ── Doppelganger decoys (Thu/Fri/Sat) ──────────────────────────────────
@@ -492,10 +611,11 @@ function buildPuzzle() {
 
     var tmpPlaced = [];
     var sorted = rawWords.slice().sort(function(a, b) { return b.word.length - a.word.length; });
+    var dirBag = _balancedDirBag(sorted.length, useDirs);
     var allOk = true;
 
     for (var wi = 0; wi < sorted.length; wi++) {
-      var result = _tryPlace(sorted[wi].word, sorted[wi].clue, false, useDirs, all8);
+      var result = _tryPlace(sorted[wi].word, sorted[wi].clue, useDirs, dirBag[wi]);
       if (!result) { allOk = false; break; }
       tmpPlaced.push(result);
     }
@@ -505,7 +625,7 @@ function buildPuzzle() {
     // Try to place hidden theme word (best effort — doesn't abort)
     var tmpTheme = null;
     if (themeWord && themeWord.length >= 3) {
-      tmpTheme = _tryPlace(themeWord, '', true, useDirs, all8);
+      tmpTheme = _tryPlace(themeWord, '', all8, all8[Math.floor(Math.random() * all8.length)]);
     }
 
     placed = tmpPlaced;
@@ -532,7 +652,7 @@ function buildPuzzle() {
       for (var dk = 0; dk < dcount; dk++) {
         var dstr = makeUniqueDecoy(placed[dw].word, G, taken);
         if (!dstr) continue;
-        var dres = _tryPlace(dstr, '', false, useDirs, all8);
+        var dres = _tryPlace(dstr, '', useDirs, useDirs[Math.floor(Math.random() * useDirs.length)]);
         if (dres) { taken[dstr] = true; decoys.push(dres); }
       }
     }
