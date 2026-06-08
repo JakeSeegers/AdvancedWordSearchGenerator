@@ -88,6 +88,8 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .cell{display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;transition:background .1s}
 .cell:hover{background:rgba(184,146,42,.18)}
 .cell.found{background:rgba(184,146,42,.5);border-radius:50%}
+.cell.decoy-reveal{box-shadow:inset 0 0 0 2px var(--red)}
+@media print{.cell.decoy-reveal{box-shadow:none}}
 .cell.found-theme{background:rgba(42,102,66,.4);border-radius:50%}
 .words-side{flex:1}
 .sec-label{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee}
@@ -146,13 +148,6 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
     <div class="diff-desc" id="diffDesc"></div>
   </div>
 
-  <div class="fp-section" id="fakeoutSection" style="display:none">
-    <div class="fp-label">Fakeout Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(optional)</span></div>
-    <div class="fakeout-hint">Listed in the clue list but NOT in the grid — designed to mislead.</div>
-    <div class="fakeout-entries" id="fakeoutEntries"></div>
-    <button class="add-word-btn" onclick="addFakeoutRow()" style="border-color:#e8c97a;color:#856404">+ add fakeout word</button>
-  </div>
-
   <div class="fp-section" id="sundaySection" style="display:none">
     <div class="fp-label">Sunday Secret Word</div>
     <input type="text" id="sundayWord" class="theme-input"
@@ -199,43 +194,43 @@ var DIFFS = [
   {
     id:1, name:'Monday', color:'#185fa5',
     desc:'Classic word search — all 8 directions on a 15×15 grid. Plain word list, no tricks.',
-    dirs:8, wobble:0, bias:false, fonts:1, listMode:'words', fakeouts:false, hiddenTheme:false,
+    dirs:8, wobble:0, bias:false, fonts:1, listMode:'words', hiddenTheme:false,
     gridSize:15, cellSize:28, showClue:false
   },
   {
     id:2, name:'Tuesday', color:'#0f6e56',
     desc:'Word list is shown, but the theme title itself is secretly hidden in the grid as a bonus. Not listed anywhere — find it if you can.',
-    dirs:8, wobble:3, bias:false, fonts:1, listMode:'words', fakeouts:false, hiddenTheme:true,
+    dirs:8, wobble:3, bias:false, fonts:1, listMode:'words', hiddenTheme:true,
     gridSize:15, cellSize:28, showClue:false
   },
   {
     id:3, name:'Wednesday', color:'#534ab7',
     desc:'No word list — clues only. Solve each clue to discover what to search for, then find it in the grid.',
-    dirs:8, wobble:4, bias:false, fonts:1, listMode:'clues', fakeouts:false, hiddenTheme:false,
+    dirs:8, wobble:4, bias:false, fonts:1, listMode:'clues', hiddenTheme:false,
     gridSize:15, cellSize:28, showClue:true
   },
   {
     id:4, name:'Thursday', color:'#ba7517',
-    desc:'Clues plus fakeout words — some entries in the list don\'t exist in the grid at all. Spot the red herrings.',
-    dirs:8, wobble:6, bias:false, fonts:1, listMode:'clues', fakeouts:true, hiddenTheme:false,
+    desc:'Clues only — but the grid is seeded with decoys: near-miss copies of the real words (an extra letter, two letters swapped, or chopped in half). Find the exact word, not its look-alike.',
+    dirs:8, wobble:6, bias:false, fonts:1, listMode:'clues', decoys:[1,1], hiddenTheme:false,
     gridSize:16, cellSize:26, showClue:true
   },
   {
     id:5, name:'Friday', color:'#993556',
-    desc:'Clues, fakeouts, and filler letters biased toward letters from the real words — making camouflage much harder to see through. Two mixed fonts.',
-    dirs:8, wobble:7, bias:true, fonts:2, listMode:'clues', fakeouts:true, hiddenTheme:false,
+    desc:'Everything from Thursday, plus filler letters biased toward the real words\' own letters so the decoys blend in. Two mixed fonts, more decoys per word.',
+    dirs:8, wobble:7, bias:true, fonts:2, listMode:'clues', decoys:[1,2], hiddenTheme:false,
     gridSize:16, cellSize:26, showClue:true
   },
   {
     id:6, name:'Saturday', color:'#3b6d11',
-    desc:'Three fonts, heavy wobble, maximum letter bias. The grid is visually exhausting to scan. Clues and fakeouts throughout.',
-    dirs:8, wobble:10, bias:true, fonts:3, listMode:'clues', fakeouts:true, hiddenTheme:false,
+    desc:'Three fonts, heavy wobble, maximum letter bias, and letters in mixed upper/lowercase. The most decoys of the week, layered over a visually exhausting grid.',
+    dirs:8, wobble:10, bias:true, fonts:3, listMode:'clues', decoys:[2,3], mixCase:true, hiddenTheme:false,
     gridSize:17, cellSize:25, showClue:true
   },
   {
     id:7, name:'Sunday', color:'#b03030',
     desc:'Word list shown plus hidden theme bonus. Four fonts, wobble, letter bias. Also includes a font-based secret puzzle: a word you supply is encoded using two special fonts — collect and unscramble the clue letters to find it.',
-    dirs:8, wobble:12, bias:true, fonts:4, listMode:'words', fakeouts:false, hiddenTheme:true,
+    dirs:8, wobble:12, bias:true, fonts:4, listMode:'words', hiddenTheme:true,
     gridSize:18, cellSize:24, showClue:false
   }
 ];
@@ -288,7 +283,6 @@ function selectDiff(id) {
 
   document.getElementById('diffDesc').textContent = currentDiff.desc;
   document.getElementById('diffDesc').style.borderLeftColor = currentDiff.color;
-  document.getElementById('fakeoutSection').style.display = currentDiff.fakeouts ? 'block' : 'none';
   document.getElementById('sundaySection').style.display = (currentDiff.id === 7) ? 'block' : 'none';
 
   // Show/hide clue column on all existing rows
@@ -300,14 +294,15 @@ function selectDiff(id) {
     }
   });
 
-  // Word length cap scales with grid size — update inputs and hint
+  // Word length cap scales with grid size — update inputs and hint live
   var maxLen = maxWordLen();
-  document.querySelectorAll('.w-word, .fakeout-entry input').forEach(function(inp) {
+  document.querySelectorAll('.w-word').forEach(function(inp) {
     inp.maxLength = maxLen;
+    inp.setAttribute('maxlength', maxLen);
     if (inp.value.length > maxLen) inp.value = inp.value.slice(0, maxLen);
   });
   var hint = document.getElementById('wordLenHint');
-  if (hint) hint.textContent = '(3–' + maxLen + ' letters)';
+  if (hint) hint.textContent = '(3–' + maxLen + ' letters · ' + currentDiff.gridSize + '×' + currentDiff.gridSize + ' grid)';
 }
 
 function maxWordLen() { return currentDiff.gridSize - 2; }
@@ -331,17 +326,6 @@ function renumberRows() {
   document.querySelectorAll('.word-entry .entry-num').forEach(function(el, i) { el.textContent = i + 1; });
 }
 
-function addFakeoutRow(word) {
-  word = word || '';
-  var container = document.getElementById('fakeoutEntries');
-  var div = document.createElement('div');
-  div.className = 'fakeout-entry';
-  div.innerHTML =
-    '<input type="text" maxlength="' + maxWordLen() + '" value="' + escHTML(word) + '" placeholder="FAKEWORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
-    '<button class="del-btn" onclick="this.closest(\'.fakeout-entry\').remove()" title="Remove">×</button>';
-  container.appendChild(div);
-}
-
 function getWords() {
   return Array.from(document.querySelectorAll('.word-entry')).map(function(row) {
     return {
@@ -350,12 +334,6 @@ function getWords() {
     };
   }).filter(function(w) { return w.word.length >= 3; });
 }
-function getFakeouts() {
-  return Array.from(document.querySelectorAll('.fakeout-entry input'))
-    .map(function(inp) { return inp.value.trim().toUpperCase(); })
-    .filter(function(w) { return w.length >= 3; });
-}
-
 function showError(msg) {
   var el = document.getElementById('errorMsg');
   el.textContent = msg; el.classList.add('show');
@@ -394,6 +372,53 @@ function _tryPlace(word, clue, isTheme, useDirs, all8) {
   return null;
 }
 
+// ── Doppelganger decoys (Thu/Fri/Sat) ──────────────────────────────────
+// Build a near-miss copy of a real word: an extra letter wedged inside,
+// two letters swapped, or the word chopped in half. Never the word itself.
+function _hasTwoDifferent(w) {
+  for (var i = 1; i < w.length; i++) { if (w[i] !== w[0]) return true; }
+  return false;
+}
+function makeDecoy(word, maxLen) {
+  var ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var feasible = [];
+  if (word.length + 1 <= maxLen) feasible.push('insert');
+  if (_hasTwoDifferent(word)) feasible.push('swap');
+  if (word.length >= 5) feasible.push('cut');
+  if (!feasible.length) return null;
+  var type = feasible[Math.floor(Math.random() * feasible.length)];
+
+  if (type === 'insert') {
+    // Wedge an extra letter at an interior position (not the first/last seam).
+    var pos = 1 + Math.floor(Math.random() * (word.length - 1));
+    var ltr;
+    do { ltr = ALPHA[Math.floor(Math.random() * 26)]; } while (ltr === word[pos - 1] || ltr === word[pos]);
+    return word.slice(0, pos) + ltr + word.slice(pos);
+  }
+  if (type === 'swap') {
+    // Swap two positions that hold different letters so the word truly changes.
+    for (var t = 0; t < 40; t++) {
+      var i = Math.floor(Math.random() * word.length);
+      var j = Math.floor(Math.random() * word.length);
+      if (i !== j && word[i] !== word[j]) {
+        var arr = word.split('');
+        var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+        return arr.join('');
+      }
+    }
+    return null;
+  }
+  // cut: keep roughly the first half of the word
+  return word.slice(0, Math.ceil(word.length / 2));
+}
+function makeUniqueDecoy(word, maxLen, taken) {
+  for (var t = 0; t < 30; t++) {
+    var d = makeDecoy(word, maxLen);
+    if (d && d !== word && !taken[d]) return d;
+  }
+  return null;
+}
+
 function buildPuzzle() {
   var diff = currentDiff;
   var theme = document.getElementById('themeInput').value.trim() || 'Word Search';
@@ -406,10 +431,6 @@ function buildPuzzle() {
 
   var toolong = rawWords.filter(function(w) { return w.word.length > G - 2; });
   if (toolong.length) { showError('"' + toolong[0].word + '" is too long for ' + diff.name + '\'s ' + G + '×' + G + ' grid.'); return; }
-
-  var fakeouts = diff.fakeouts
-    ? getFakeouts().filter(function(f) { return !rawWords.some(function(w) { return w.word === f; }); })
-    : [];
 
   // Derive hidden theme word from title (letters only, up to 14 chars)
   var themeWord = '';
@@ -458,6 +479,26 @@ function buildPuzzle() {
   if (!placed || placed.length < rawWords.length) {
     showError('Could not fit all words. Try a larger grid difficulty or shorter words.');
     return;
+  }
+
+  // Plant doppelganger decoys — near-miss copies of the real words, woven
+  // into the grid as straight-line traps but never shown in the list.
+  // Count scales by day (Thu 1 / Fri 1-2 / Sat 2-3 per word). Best-effort:
+  // a decoy that can't find room is simply skipped.
+  var decoys = [];
+  if (diff.decoys) {
+    var dmin = diff.decoys[0], dmax = diff.decoys[1];
+    var taken = {};
+    for (var di = 0; di < placed.length; di++) taken[placed[di].word] = true;
+    for (var dw = 0; dw < placed.length; dw++) {
+      var dcount = dmin + Math.floor(Math.random() * (dmax - dmin + 1));
+      for (var dk = 0; dk < dcount; dk++) {
+        var dstr = makeUniqueDecoy(placed[dw].word, G, taken);
+        if (!dstr) continue;
+        var dres = _tryPlace(dstr, '', false, useDirs, all8);
+        if (dres) { taken[dstr] = true; decoys.push(dres); }
+      }
+    }
   }
 
   // Fill empty cells
@@ -531,7 +572,7 @@ function buildPuzzle() {
     }
   }
 
-  puzzle = { theme: theme, G: G, grid: _grid, placed: placed, placedTheme: placedTheme, themeWord: themeWord, fakeouts: fakeouts, diff: diff, cs: cs, fs: fs, sundayMeta: sundayMeta };
+  puzzle = { theme: theme, G: G, grid: _grid, placed: placed, placedTheme: placedTheme, themeWord: themeWord, decoys: decoys, diff: diff, cs: cs, fs: fs, sundayMeta: sundayMeta };
   foundWords = new Set();
   isRevealed = false;
   renderPuzzle();
@@ -542,6 +583,7 @@ function renderPuzzle() {
   var diff = p.diff, G = p.G, grid = p.grid, placed = p.placed, cs = p.cs, fs = p.fs;
   var fontSet = FONT_SETS[Math.min(diff.fonts - 1, FONT_SETS.length - 1)];
   var isSunday = diff.id === 7;
+  var mixCase = !!diff.mixCase;
 
   var gHTML = '<div class="grid" id="mainGrid">';
   for (var r = 0; r < G; r++) {
@@ -570,7 +612,11 @@ function renderPuzzle() {
       }
       var style = 'width:' + cs + 'px;height:' + cs + 'px;font-size:' + cellFs + 'px;font-family:' + font + ';font-weight:' + bold + ';transform:rotate(' + wob + 'deg);opacity:' + op;
       if (isSunday) style += ';font-style:' + italic;
-      gHTML += '<div class="cell" data-r="' + r + '" data-c="' + c + '" style="' + style + '">' + grid[r][c] + '</div>';
+      // Display case is cosmetic only — the underlying letter stays uppercase
+      // so selection/reveal (which match by position, not text) are unaffected.
+      var dispChar = grid[r][c];
+      if (mixCase && Math.random() < 0.5) dispChar = dispChar.toLowerCase();
+      gHTML += '<div class="cell" data-r="' + r + '" data-c="' + c + '" style="' + style + '">' + dispChar + '</div>';
     }
     gHTML += '</div>';
   }
@@ -585,20 +631,18 @@ function renderPuzzle() {
     wHTML += '</div>';
   } else if (diff.listMode === 'clues') {
     var clueList = shuffle(
-      placed.map(function(pp) { return { word: pp.word, clue: pp.clue || '(' + pp.word.length + ' letters)', isFakeout: false }; }).concat(
-      p.fakeouts.map(function(w) { return { word: w, clue: '(' + w.length + ' letters)', isFakeout: true }; }))
+      placed.map(function(pp) { return { word: pp.word, clue: pp.clue || '(' + pp.word.length + ' letters)' }; })
     );
     wHTML = '<div class="sec-label">Clues</div><div class="clues-list">';
     for (var ci = 0; ci < clueList.length; ci++) {
       var item = clueList[ci];
-      var cls = item.isFakeout ? 'clue-item fakeout-row' : 'clue-item';
-      wHTML += '<div class="' + cls + '" id="ci-' + item.word + '"><span class="clue-num">' + (ci + 1) + '.</span> ' + escHTML(item.clue) + '<span class="clue-letters">' + item.word.length + ' ltrs</span><div class="clue-answer">→ ' + item.word + '</div></div>';
+      wHTML += '<div class="clue-item" id="ci-' + item.word + '"><span class="clue-num">' + (ci + 1) + '.</span> ' + escHTML(item.clue) + '<span class="clue-letters">' + item.word.length + ' ltrs</span><div class="clue-answer">→ ' + item.word + '</div></div>';
     }
     wHTML += '</div>';
   }
 
-  var fakeoutNote = p.fakeouts.length && diff.listMode === 'clues'
-    ? '<div class="fakeout-note">' + p.fakeouts.length + ' fakeout word' + (p.fakeouts.length > 1 ? 's are' : ' is') + ' in the list but not in the grid.</div>' : '';
+  var fakeoutNote = (diff.decoys && p.decoys.length)
+    ? '<div class="fakeout-note">⚠ <strong>Watch for decoys:</strong> near-miss copies of these words are hidden in the grid — an extra letter, two letters swapped, or only half the word. Circle the exact, complete word.</div>' : '';
 
   var bonusNote = '';
   if (diff.hiddenTheme) {
@@ -715,6 +759,16 @@ function toggleReveal() {
       var ci = document.getElementById('ci-' + pp.word); if (ci) ci.classList.add('found-clue', 'revealed-clue');
       var ch = document.getElementById('chip-' + pp.word); if (ch) ch.classList.add('found-chip');
     }
+    // Outline the decoy traps so the designer can proof their placement
+    if (puzzle.decoys) {
+      for (var dd = 0; dd < puzzle.decoys.length; dd++) {
+        var dpos = puzzle.decoys[dd].positions;
+        for (var dj = 0; dj < dpos.length; dj++) {
+          var de = document.querySelector('[data-r="' + dpos[dj][0] + '"][data-c="' + dpos[dj][1] + '"]');
+          if (de) de.classList.add('decoy-reveal');
+        }
+      }
+    }
     // Also reveal hidden theme word so the designer can verify placement
     var pt = puzzle.placedTheme;
     if (pt) {
@@ -749,6 +803,7 @@ function resetFound() {
   var rb = document.getElementById('revealBtn'); if (rb) rb.textContent = 'Reveal all';
   document.querySelectorAll('.cell.found').forEach(function(el) { el.classList.remove('found'); });
   document.querySelectorAll('.cell.found-theme').forEach(function(el) { el.classList.remove('found-theme'); });
+  document.querySelectorAll('.cell.decoy-reveal').forEach(function(el) { el.classList.remove('decoy-reveal'); });
   document.querySelectorAll('.found-chip').forEach(function(el) { el.classList.remove('found-chip'); });
   document.querySelectorAll('.found-clue').forEach(function(el) { el.classList.remove('found-clue', 'revealed-clue'); });
   foundWords = new Set();
