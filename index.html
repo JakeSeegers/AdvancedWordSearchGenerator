@@ -108,6 +108,8 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .clue-letters{color:#ccc;margin-left:4px;font-size:10px}
 .clue-answer{font-family:'Courier New',monospace;color:var(--green);margin-top:3px;font-size:11px;display:none}
 .clue-item.revealed-clue .clue-answer{display:block}
+.howto{font-size:11.5px;color:#3a3326;background:#faf7ef;border:.5px solid #ddd2b4;border-left:3px solid var(--gold);border-radius:3px;padding:7px 10px;margin-bottom:11px;line-height:1.55}
+.howto strong{color:var(--ink)}
 .bonus-note{font-size:11px;color:#2a5c3a;background:#f0faf4;border:.5px solid #a3d4b0;border-radius:3px;padding:6px 9px;margin-bottom:9px;line-height:1.5}
 .fakeout-note{font-size:11px;color:#7a5c20;background:#fffbf0;border:.5px solid #d4b870;border-radius:3px;padding:5px 8px;margin-bottom:9px;font-style:italic}
 .diff-badge{display:inline-flex;align-items:center;font-size:11px;padding:2px 8px;border-radius:8px;margin-left:8px;font-family:var(--body);font-style:italic;vertical-align:middle}
@@ -801,6 +803,15 @@ function renderPuzzle() {
   var fakeoutNote = (diff.decoys && p.decoys.length)
     ? '<div class="fakeout-note">⚠ <strong>Watch for decoys:</strong> near-miss copies of these words are hidden in the grid — an extra letter, two letters swapped, or only half the word. Circle the exact, complete word.</div>' : '';
 
+  // Solver-facing instructions printed on the puzzle itself. (The creator-only
+  // difficulty description in the form panel stays as-is; this is the version
+  // the person solving the printout actually needs.)
+  var howToBody = diff.listMode === 'clues'
+    ? 'There is no word list — solve each clue to work out the hidden word, then find it in the grid.'
+    : 'Find every word from the list hidden in the grid.';
+  var howToBlock = '<div class="howto"><strong>How to solve:</strong> ' + howToBody +
+    ' Words can read across, down, or diagonally — forwards or backwards.</div>';
+
   var bonusNote = '';
   if (diff.hiddenTheme) {
     if (p.placedTheme) {
@@ -851,7 +862,7 @@ function renderPuzzle() {
       '</div>' +
       '<div class="page-body">' +
         '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
-        '<div class="words-side">' + wHTML + bonusNote + sundayBlock + fakeoutNote + '</div>' +
+        '<div class="words-side">' + howToBlock + wHTML + bonusNote + sundayBlock + fakeoutNote + '</div>' +
       '</div>' +
     '</div>';
 
