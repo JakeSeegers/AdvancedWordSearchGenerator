@@ -94,7 +94,7 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .cell.found{background:rgba(184,146,42,.5);border-radius:50%}
 .cell.decoy-reveal{box-shadow:inset 0 0 0 2px var(--red)}
 @media print{.cell.decoy-reveal{box-shadow:none}}
-.cell.found-theme{background:rgba(42,102,66,.4);border-radius:50%}
+.cell.found-theme{background:rgba(91,46,178,.26);color:#52219e;font-weight:700;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(91,46,178,.6)}
 .words-side{flex:1}
 .sec-label{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee}
 .word-chips{display:flex;flex-wrap:wrap;gap:5px}
@@ -934,7 +934,7 @@ function toggleReveal() {
         if (te) te.classList.add('found-theme');
       }
       var note = document.getElementById('bonusNote');
-      if (note) note.innerHTML = '\u{1F50D} <strong>Hidden word revealed:</strong> <span style="font-family:Courier New,monospace;font-weight:700">' + pt.word + '</span> — for proofing only.';
+      if (note) note.innerHTML = '\u{1F50D} <strong>Hidden word revealed:</strong> <span style="font-family:Courier New,monospace;font-weight:700;color:#52219e">' + pt.word + '</span> — highlighted in purple on the grid (proofing only).';
     // Reveal Sunday secret word for proofing
     if (puzzle.sundayMeta) {
       var sb = document.querySelector('.sunday-block-title');
