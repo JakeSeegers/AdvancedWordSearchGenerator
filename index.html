@@ -82,6 +82,7 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
    search is always exactly one printed page, no matter the grid size. The
    whole sheet is then scaled again to fit the on-screen preview panel. */
 .sheet-scaler{transform-origin:top left}
+.words-fit{transform-origin:top left}
 .puzzle-page{background:#fff;border:1px solid var(--rule);box-shadow:3px 3px 12px rgba(0,0,0,.08);box-sizing:border-box;width:11in;height:8.5in;padding:0.35in;margin:0;overflow:hidden}
 .page-inner{width:100%;transform-origin:top left}
 .page-header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:14px}
@@ -288,7 +289,12 @@ var VG_LEVELS = [
   { id:5, name:'Level 5', color:'#993556', dirs:8, wobble:12, fonts:4, listMode:'clues', bias:true, decoys:[2,3],
     desc:'Clues and decoys like Level 4, but with the most wobble, the most varied fonts, and filler letters heavily biased toward this level\'s own words. Spans the entire outer grid.' }
 ];
-var VG_BOX_SIZES = [21, 25, 29, 33, 37];
+// Level 1 needs a big enough box to fit its longest allowed word (19 letters
+// -> box >= 21). Levels 2-5 only ever take words up to the general 14-letter
+// cap, which box 21 already clears with room to spare — so the remaining
+// boxes only need small steps to keep visibly nesting, not another +4 each.
+// A tighter grid means bigger, more legible cells at print time.
+var VG_BOX_SIZES = [21, 23, 25, 27, 29];
 
 var currentDiff = DIFFS[0];
 var appMode = 'daily';
@@ -913,8 +919,10 @@ function buildVGPuzzle() {
     }
   }
 
-  // Cell size shrinks as the grid grows so a big grid doesn't hog the whole
-  // page width and starve the 5 level lists next to it.
+  // Placeholder cell size for the very first paint — renderVGPuzzle immediately
+  // recomputes the real size (fitVGPage) against the actual fixed page
+  // dimensions, so the grid renders as large as it can while the clue lists
+  // still fit beside it.
   var cs = Math.max(11, Math.min(22, Math.round(480 / G)));
 
   puzzle = { theme: theme, G: G, grid: _grid, placed: placedAll, placedTheme: null, decoys: decoysAll, vg: true, groups: groupsFinal, boxes: boxes, cs: cs, fs: fs };
@@ -1017,7 +1025,7 @@ function renderVGPuzzle() {
           '</div>' +
           '<div class="page-body">' +
             '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
-            '<div class="words-side">' + groupsHTML + '</div>' +
+            '<div class="words-side"><div class="words-fit" id="wordsFit">' + groupsHTML + '</div></div>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -1027,8 +1035,52 @@ function renderVGPuzzle() {
     cell.addEventListener('click', function() { clickCell(cell); });
   });
 
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPage(); fitScreen(); });
-  else { fitPage(); fitScreen(); }
+  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitVGPage(); fitScreen(); });
+  else { fitVGPage(); fitScreen(); }
+}
+
+// Give the grid first claim on space: size its cells as large as the fixed
+// page allows (bounded by both the page's height and by leaving the clue
+// columns a usable minimum width), then only shrink the clue lists — never
+// the grid — if they still don't fit the leftover height. Legibility for the
+// person solving on paper beats perfectly using every pixel of the sheet.
+function fitVGPage() {
+  var page = document.querySelector('.puzzle-page');
+  var header = document.querySelector('.page-header');
+  var wordsFit = document.getElementById('wordsFit');
+  if (!page || !wordsFit || !puzzle || !puzzle.G) return;
+
+  var pcs = getComputedStyle(page);
+  var availW = page.clientWidth - parseFloat(pcs.paddingLeft || 0) - parseFloat(pcs.paddingRight || 0);
+  var headerH = header ? header.offsetHeight + 14 : 0;
+  var availH = page.clientHeight - parseFloat(pcs.paddingTop || 0) - parseFloat(pcs.paddingBottom || 0) - headerH;
+
+  var G = puzzle.G;
+  var gap = 28; // matches .page-body's gap
+  var minWordsW = 320; // keep the 2-column clue layout legible
+  var maxGridW = Math.max(160, availW - minWordsW - gap);
+
+  var csByHeight = Math.floor(availH / G);
+  var csByWidth = Math.floor(maxGridW / G);
+  var cs = Math.max(12, Math.min(34, csByHeight, csByWidth));
+  var fs = Math.max(9, Math.min(22, Math.round(cs * 0.58)));
+
+  document.querySelectorAll('.cell').forEach(function(cell) {
+    cell.style.width = cs + 'px';
+    cell.style.height = cs + 'px';
+    cell.style.fontSize = fs + 'px';
+  });
+  puzzle.cs = cs; puzzle.fs = fs;
+
+  // The clue columns get whatever height is left. Only shrink them (never
+  // the grid) if they still overflow it.
+  wordsFit.style.transform = 'none'; wordsFit.style.width = '';
+  var wfH = wordsFit.scrollHeight;
+  if (wfH > availH) {
+    var s = Math.max(0.55, availH / wfH);
+    wordsFit.style.transform = 'scale(' + s + ')';
+    wordsFit.style.width = (100 / s) + '%';
+  }
 }
 
 function renderPuzzle() {
