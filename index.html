@@ -913,7 +913,11 @@ function buildVGPuzzle() {
     }
   }
 
-  puzzle = { theme: theme, G: G, grid: _grid, placed: placedAll, placedTheme: null, decoys: decoysAll, vg: true, groups: groupsFinal, boxes: boxes, cs: 20, fs: fs };
+  // Cell size shrinks as the grid grows so a big grid doesn't hog the whole
+  // page width and starve the 5 level lists next to it.
+  var cs = Math.max(11, Math.min(22, Math.round(480 / G)));
+
+  puzzle = { theme: theme, G: G, grid: _grid, placed: placedAll, placedTheme: null, decoys: decoysAll, vg: true, groups: groupsFinal, boxes: boxes, cs: cs, fs: fs };
   foundWords = new Set();
   isRevealed = false;
   renderVGPuzzle();
@@ -978,7 +982,11 @@ function renderVGPuzzle() {
   }
   gHTML += '</div>';
 
-  var groupsHTML = '';
+  // Lay the 5 level lists out in 2 columns instead of one long stack — a
+  // single tall column is what was forcing the fixed-page fitter to shrink
+  // the whole sheet (grid included) down to fit its height, wasting all the
+  // spare width next to it.
+  var groupsHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">';
   var totalWords = 0;
   for (var gi = 0; gi < p.groups.length; gi++) {
     var g = p.groups[gi];
@@ -991,6 +999,7 @@ function renderVGPuzzle() {
         wordListHTML(g.cfg.listMode, g.placed) + decoyNote +
       '</div>';
   }
+  groupsHTML += '</div>';
 
   document.getElementById('puzzlePanel').innerHTML =
     '<div class="print-toolbar">' +
