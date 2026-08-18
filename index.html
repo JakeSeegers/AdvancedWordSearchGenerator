@@ -278,7 +278,7 @@ var FONT_SETS = [
 
 var VG_LEVELS = [
   { id:1, name:'Level 1', color:'#185fa5', dirs:4, wobble:0, fonts:1, listMode:'words', bias:false,
-    desc:'Innermost box. No diagonals. Words must be under 8 letters and fit entirely inside the smallest box.' },
+    desc:'Innermost box. No diagonals. Words must be under 20 letters and fit entirely inside the smallest box.' },
   { id:2, name:'Level 2', color:'#0f6e56', dirs:8, wobble:4, fonts:2, listMode:'words', bias:false,
     desc:'Diagonals allowed. Fonts get a little more varied and wobbly. May cross into Level 1\'s box.' },
   { id:3, name:'Level 3', color:'#534ab7', dirs:8, wobble:4, fonts:1, listMode:'clues', bias:false,
@@ -288,7 +288,7 @@ var VG_LEVELS = [
   { id:5, name:'Level 5', color:'#993556', dirs:8, wobble:12, fonts:4, listMode:'clues', bias:true, decoys:[2,3],
     desc:'Clues and decoys like Level 4, but with the most wobble, the most varied fonts, and filler letters heavily biased toward this level\'s own words. Spans the entire outer grid.' }
 ];
-var VG_BOX_SIZES = [9, 13, 17, 21, 25];
+var VG_BOX_SIZES = [21, 25, 29, 33, 37];
 
 var currentDiff = DIFFS[0];
 var appMode = 'daily';
@@ -393,7 +393,7 @@ function buildVGLevelsUI() {
       sec.className = 'fp-section';
       sec.style.borderLeft = '3px solid ' + cfg.color;
       var badge = '<span class="diff-badge" style="color:' + cfg.color + ';background:' + cfg.color + '18;border:.5px solid ' + cfg.color + '55">' + cfg.name + '</span>';
-      var maxLenNote = cfg.id === 1 ? '<span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(under 8 letters)</span>' : '';
+      var maxLenNote = cfg.id === 1 ? '<span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(under 20 letters)</span>' : '';
       var html =
         '<div class="fp-label">' + badge + ' ' + maxLenNote + '</div>' +
         '<div class="diff-desc" style="border-left-color:' + cfg.color + '">' + cfg.desc + '</div>' +
@@ -413,7 +413,7 @@ function addVGWordRow(level, word, clue) {
   var cfg = VG_LEVELS[level - 1];
   var container = document.getElementById('vgWords' + level);
   var n = container.children.length + 1;
-  var maxLen = level === 1 ? 7 : 14;
+  var maxLen = level === 1 ? 19 : 14;
   var div = document.createElement('div');
   div.className = 'word-entry' + (cfg.listMode === 'clues' ? '' : ' no-clue');
   div.innerHTML =
@@ -527,7 +527,7 @@ function applyConfig(cfg) {
             var word = '', clue = '';
             if (typeof item === 'string') { word = item; }
             else if (item && typeof item === 'object') { word = item.word || ''; clue = item.clue || ''; }
-            var maxLen = lv === 1 ? 7 : 14;
+            var maxLen = lv === 1 ? 19 : 14;
             word = String(word).toUpperCase().replace(/[^A-Z]/g, '').slice(0, maxLen);
             addVGWordRow(lv, word, String(clue));
           });
@@ -835,8 +835,8 @@ function buildVGPuzzle() {
     var words = getVGWords(lv);
     if (!words.length) { showError('Level ' + lv + ' needs at least one word.'); return; }
     if (lv === 1) {
-      var tooLong1 = words.filter(function(w) { return w.word.length >= 8; });
-      if (tooLong1.length) { showError('"' + tooLong1[0].word + '" — Level 1 words must be under 8 letters.'); return; }
+      var tooLong1 = words.filter(function(w) { return w.word.length >= 20; });
+      if (tooLong1.length) { showError('"' + tooLong1[0].word + '" — Level 1 words must be under 20 letters.'); return; }
     }
     var box = boxes[lv - 1];
     var tooLongBox = words.filter(function(w) { return w.word.length > box.size - 2; });
