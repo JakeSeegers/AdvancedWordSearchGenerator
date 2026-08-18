@@ -141,30 +141,12 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
   </div>
 
   <div class="fp-section">
-    <div class="fp-label">Difficulty</div>
-    <div class="day-tabs" id="diffTiers"></div>
-    <div class="diff-desc" id="diffDesc"></div>
-  </div>
-
-  <div class="fp-section" id="fakeoutSection" style="display:none">
-    <div class="fp-label">Fakeout Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(optional)</span></div>
-    <div class="fakeout-hint">Listed in the clue list but NOT in the grid — designed to mislead.</div>
-    <div class="fakeout-entries" id="fakeoutEntries"></div>
-    <button class="add-word-btn" onclick="addFakeoutRow()" style="border-color:#e8c97a;color:#856404">+ add fakeout word</button>
-  </div>
-
-  <div class="fp-section" id="sundaySection" style="display:none">
-    <div class="fp-label">Sunday Secret Word</div>
-    <input type="text" id="sundayWord" class="theme-input"
-      placeholder="e.g. DINOSAUR" maxlength="20"
-      style="font-size:15px;font-family:'Courier New',monospace;letter-spacing:2px;text-transform:uppercase"
-      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
-    <div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.6">
-      This word never appears in the grid. Its letters (plus 2–4 extra full copies of the same set) are scattered in
-      <span style="font-family:Impact,'Arial Narrow Bold',sans-serif;font-weight:bold;font-style:normal;color:var(--ink)">Impact</span> font.
-      A separate count of <span style="font-family:'Comic Sans MS',cursive;font-style:normal;color:var(--ink)">Comic Sans</span>
-      letters tells solvers how many Impact letters to pick. They collect those letters and unscramble the answer.
+    <div class="fp-label">Mode</div>
+    <div class="day-tabs">
+      <button class="daytab selected" id="modeDailyBtn" onclick="selectMode('daily')">Daily Puzzle</button>
+      <button class="daytab" id="modeVGBtn" onclick="selectMode('vg')">Video Game Mode</button>
     </div>
+    <div class="diff-desc" id="modeDesc">Seven day-of-week difficulty tiers, one puzzle each.</div>
   </div>
 
   <div class="fp-section">
@@ -175,14 +157,53 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
     </div>
   </div>
 
-  <div class="fp-section">
-    <div class="fp-label">Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(4–14 letters)</span></div>
-    <div class="word-entries" id="wordEntries"></div>
-    <button class="add-word-btn" onclick="addWordRow()">+ add another word</button>
+  <div id="dailyModeUI">
+
+    <div class="fp-section">
+      <div class="fp-label">Difficulty</div>
+      <div class="day-tabs" id="diffTiers"></div>
+      <div class="diff-desc" id="diffDesc"></div>
+    </div>
+
+    <div class="fp-section" id="fakeoutSection" style="display:none">
+      <div class="fp-label">Fakeout Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(optional)</span></div>
+      <div class="fakeout-hint">Listed in the clue list but NOT in the grid — designed to mislead.</div>
+      <div class="fakeout-entries" id="fakeoutEntries"></div>
+      <button class="add-word-btn" onclick="addFakeoutRow()" style="border-color:#e8c97a;color:#856404">+ add fakeout word</button>
+    </div>
+
+    <div class="fp-section" id="sundaySection" style="display:none">
+      <div class="fp-label">Sunday Secret Word</div>
+      <input type="text" id="sundayWord" class="theme-input"
+        placeholder="e.g. DINOSAUR" maxlength="20"
+        style="font-size:15px;font-family:'Courier New',monospace;letter-spacing:2px;text-transform:uppercase"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')">
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic;line-height:1.6">
+        This word never appears in the grid. Its letters (plus 2–4 extra full copies of the same set) are scattered in
+        <span style="font-family:Impact,'Arial Narrow Bold',sans-serif;font-weight:bold;font-style:normal;color:var(--ink)">Impact</span> font.
+        A separate count of <span style="font-family:'Comic Sans MS',cursive;font-style:normal;color:var(--ink)">Comic Sans</span>
+        letters tells solvers how many Impact letters to pick. They collect those letters and unscramble the answer.
+      </div>
+    </div>
+
+    <div class="fp-section">
+      <div class="fp-label">Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(4–14 letters)</span></div>
+      <div class="word-entries" id="wordEntries"></div>
+      <button class="add-word-btn" onclick="addWordRow()">+ add another word</button>
+    </div>
+
+  </div>
+
+  <div id="vgModeUI" style="display:none">
+    <div class="fp-section">
+      <div class="fp-label">Video Game Levels</div>
+      <div class="diff-desc">Five nested boxes, smallest in the center. Each level's box is wider than the last, so higher-level words can cross into the lower levels' territory. Every level needs at least one word.</div>
+    </div>
+    <div id="vgLevels"></div>
   </div>
 
   <div class="error-msg" id="errorMsg"></div>
-  <button class="build-btn" onclick="buildPuzzle()">Generate Puzzle →</button>
+  <button class="build-btn" onclick="generatePuzzle()">Generate Puzzle →</button>
 
 </div>
 
@@ -247,10 +268,47 @@ var FONT_SETS = [
   ['Georgia','Times New Roman','Palatino','Book Antiqua']
 ];
 
+var VG_LEVELS = [
+  { id:1, name:'Level 1', color:'#185fa5', dirs:4, wobble:0, fonts:1, listMode:'words', fakeouts:false, bias:false,
+    desc:'Innermost box. No diagonals. Words must be under 8 letters and fit entirely inside the smallest box.' },
+  { id:2, name:'Level 2', color:'#0f6e56', dirs:8, wobble:4, fonts:2, listMode:'words', fakeouts:false, bias:false,
+    desc:'Diagonals allowed. Fonts get a little more varied and wobbly. May cross into Level 1\'s box.' },
+  { id:3, name:'Level 3', color:'#534ab7', dirs:8, wobble:4, fonts:1, listMode:'clues', fakeouts:false, bias:false,
+    desc:'Clue-only, like Wednesday — no word list, just clues. Diagonals allowed. May cross into Levels 1–2.' },
+  { id:4, name:'Level 4', color:'#ba7517', dirs:8, wobble:6, fonts:1, listMode:'clues', fakeouts:true, bias:false,
+    desc:'Clues plus fakeout words, like Thursday — some listed entries aren\'t really in the grid. May cross into Levels 1–3.' },
+  { id:5, name:'Level 5', color:'#993556', dirs:8, wobble:12, fonts:4, listMode:'clues', fakeouts:true, bias:true,
+    desc:'Clues and fakeouts like the others, but with the most wobble, the most varied fonts, and filler letters heavily biased toward this level\'s own words. Spans the entire outer grid.' }
+];
+var VG_BOX_SIZES = [9, 13, 17, 21, 25];
+
 var currentDiff = DIFFS[0];
+var appMode = 'daily';
 var puzzle = null;
 var foundWords = new Set();
 var isRevealed = false;
+
+function selectMode(mode) {
+  appMode = mode;
+  document.getElementById('modeDailyBtn').classList.toggle('selected', mode === 'daily');
+  document.getElementById('modeVGBtn').classList.toggle('selected', mode === 'vg');
+  document.getElementById('modeDailyBtn').style.background = mode === 'daily' ? 'var(--ink)' : '';
+  document.getElementById('modeDailyBtn').style.color = mode === 'daily' ? '#fff' : '';
+  document.getElementById('modeDailyBtn').style.borderColor = mode === 'daily' ? 'transparent' : '';
+  document.getElementById('modeVGBtn').style.background = mode === 'vg' ? 'var(--ink)' : '';
+  document.getElementById('modeVGBtn').style.color = mode === 'vg' ? '#fff' : '';
+  document.getElementById('modeVGBtn').style.borderColor = mode === 'vg' ? 'transparent' : '';
+  document.getElementById('dailyModeUI').style.display = mode === 'daily' ? 'block' : 'none';
+  document.getElementById('vgModeUI').style.display = mode === 'vg' ? 'block' : 'none';
+  document.getElementById('modeDesc').textContent = mode === 'daily'
+    ? 'Seven day-of-week difficulty tiers, one puzzle each.'
+    : 'One puzzle, five nested difficulty levels — like a game with escalating stages.';
+}
+
+function generatePuzzle() {
+  if (appMode === 'vg') buildVGPuzzle();
+  else buildPuzzle();
+}
 
 function buildDiffUI() {
   var c = document.getElementById('diffTiers');
@@ -331,6 +389,80 @@ function addFakeoutRow(word) {
   container.appendChild(div);
 }
 
+function buildVGLevelsUI() {
+  var c = document.getElementById('vgLevels');
+  for (var i = 0; i < VG_LEVELS.length; i++) {
+    (function(cfg) {
+      var sec = document.createElement('div');
+      sec.className = 'fp-section';
+      sec.style.borderLeft = '3px solid ' + cfg.color;
+      var badge = '<span class="diff-badge" style="color:' + cfg.color + ';background:' + cfg.color + '18;border:.5px solid ' + cfg.color + '55">' + cfg.name + '</span>';
+      var maxLenNote = cfg.id === 1 ? '<span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(under 8 letters)</span>' : '';
+      var html =
+        '<div class="fp-label">' + badge + ' ' + maxLenNote + '</div>' +
+        '<div class="diff-desc" style="border-left-color:' + cfg.color + '">' + cfg.desc + '</div>' +
+        '<div class="word-entries" id="vgWords' + cfg.id + '" style="margin-top:9px"></div>' +
+        '<button class="add-word-btn" onclick="addVGWordRow(' + cfg.id + ')">+ add word</button>';
+      if (cfg.fakeouts) {
+        html +=
+          '<div style="margin-top:10px">' +
+            '<div class="fakeout-hint">Fakeout words for this level — listed in the clues but NOT in the grid.</div>' +
+            '<div class="fakeout-entries" id="vgFakeouts' + cfg.id + '"></div>' +
+            '<button class="add-word-btn" onclick="addVGFakeoutRow(' + cfg.id + ')" style="border-color:#e8c97a;color:#856404">+ add fakeout word</button>' +
+          '</div>';
+      }
+      sec.innerHTML = html;
+      c.appendChild(sec);
+    })(VG_LEVELS[i]);
+  }
+}
+
+function addVGWordRow(level, word, clue) {
+  word = word || ''; clue = clue || '';
+  var cfg = VG_LEVELS[level - 1];
+  var container = document.getElementById('vgWords' + level);
+  var n = container.children.length + 1;
+  var maxLen = level === 1 ? 7 : 14;
+  var div = document.createElement('div');
+  div.className = 'word-entry' + (cfg.listMode === 'clues' ? '' : ' no-clue');
+  div.innerHTML =
+    '<span class="entry-num">' + n + '</span>' +
+    '<input class="w-word" type="text" maxlength="' + maxLen + '" value="' + escHTML(word) + '" placeholder="WORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
+    '<input class="w-clue" type="text" maxlength="120" value="' + escHTML(clue) + '" placeholder="Clue text…">' +
+    '<button class="del-btn" onclick="removeVGRow(this,' + level + ')" title="Remove">×</button>';
+  container.appendChild(div);
+  renumberVGRows(level);
+}
+function removeVGRow(btn, level) { btn.closest('.word-entry').remove(); renumberVGRows(level); }
+function renumberVGRows(level) {
+  document.querySelectorAll('#vgWords' + level + ' .entry-num').forEach(function(el, i) { el.textContent = i + 1; });
+}
+function addVGFakeoutRow(level, word) {
+  word = word || '';
+  var container = document.getElementById('vgFakeouts' + level);
+  var div = document.createElement('div');
+  div.className = 'fakeout-entry';
+  div.innerHTML =
+    '<input type="text" maxlength="14" value="' + escHTML(word) + '" placeholder="FAKEWORD" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">' +
+    '<button class="del-btn" onclick="this.closest(\'.fakeout-entry\').remove()" title="Remove">×</button>';
+  container.appendChild(div);
+}
+function getVGWords(level) {
+  return Array.from(document.querySelectorAll('#vgWords' + level + ' .word-entry')).map(function(row) {
+    return {
+      word: row.querySelector('.w-word').value.trim().toUpperCase(),
+      clue: row.querySelector('.w-clue').value.trim()
+    };
+  }).filter(function(w) { return w.word.length >= 3; });
+}
+function getVGFakeouts(level) {
+  var container = document.getElementById('vgFakeouts' + level);
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('input'))
+    .map(function(inp) { return inp.value.trim().toUpperCase(); })
+    .filter(function(w) { return w.length >= 3; });
+}
+
 function getWords() {
   return Array.from(document.querySelectorAll('.word-entry')).map(function(row) {
     return {
@@ -377,6 +509,27 @@ function _tryPlace(word, clue, isTheme, useDirs, all8) {
     var r = Math.floor(Math.random() * _G);
     var c = Math.floor(Math.random() * _G);
     if (_okCell(word, r, c, dir[0], dir[1])) {
+      return { word: word, clue: clue || '', positions: _putWord(word, r, c, dir[0], dir[1]), found: false };
+    }
+  }
+  return null;
+}
+function _okCellB(w, r, c, dr, dc, box) {
+  for (var i = 0; i < w.length; i++) {
+    var nr = r + i * dr, nc = c + i * dc;
+    if (nr < box.r0 || nr > box.r1 || nc < box.c0 || nc > box.c1) return false;
+    if (_grid[nr][nc] && _grid[nr][nc] !== w[i]) return false;
+  }
+  return true;
+}
+function _tryPlaceB(word, clue, dirsList, box) {
+  var shuffled = dirsList.slice().sort(function() { return Math.random() - 0.5; });
+  var rows = box.r1 - box.r0 + 1, cols = box.c1 - box.c0 + 1;
+  for (var a = 0; a < 2000; a++) {
+    var dir = shuffled[a % shuffled.length];
+    var r = box.r0 + Math.floor(Math.random() * rows);
+    var c = box.c0 + Math.floor(Math.random() * cols);
+    if (_okCellB(word, r, c, dir[0], dir[1], box)) {
       return { word: word, clue: clue || '', positions: _putWord(word, r, c, dir[0], dir[1]), found: false };
     }
   }
@@ -524,6 +677,189 @@ function buildPuzzle() {
   foundWords = new Set();
   isRevealed = false;
   renderPuzzle();
+}
+
+function buildVGPuzzle() {
+  var theme = document.getElementById('themeInput').value.trim() || 'Word Search';
+  var fs = parseInt(document.getElementById('fontSize').value) || 13;
+  var G = VG_BOX_SIZES[VG_BOX_SIZES.length - 1];
+
+  var boxes = VG_BOX_SIZES.map(function(size) {
+    var off = Math.floor((G - size) / 2);
+    return { size: size, r0: off, c0: off, r1: off + size - 1, c1: off + size - 1 };
+  });
+
+  var levelWords = [];
+  for (var lv = 1; lv <= 5; lv++) {
+    var cfg = VG_LEVELS[lv - 1];
+    var words = getVGWords(lv);
+    if (!words.length) { showError('Level ' + lv + ' needs at least one word.'); return; }
+    if (lv === 1) {
+      var tooLong1 = words.filter(function(w) { return w.word.length >= 8; });
+      if (tooLong1.length) { showError('"' + tooLong1[0].word + '" — Level 1 words must be under 8 letters.'); return; }
+    }
+    var box = boxes[lv - 1];
+    var tooLongBox = words.filter(function(w) { return w.word.length > box.size - 2; });
+    if (tooLongBox.length) { showError('"' + tooLongBox[0].word + '" is too long for Level ' + lv + '\'s ' + box.size + '×' + box.size + ' box.'); return; }
+    levelWords.push({
+      level: lv, cfg: cfg, box: box, words: words,
+      fakeouts: cfg.fakeouts ? getVGFakeouts(lv).filter(function(f) { return !words.some(function(w) { return w.word === f; }); }) : []
+    });
+  }
+
+  var all8 = [[0,1],[0,-1],[1,0],[-1,0],[1,1],[-1,-1],[1,-1],[-1,1]];
+  var dirs4 = [[0,1],[0,-1],[1,0],[-1,0]];
+
+  var placedAll = null, groupsFinal = null;
+  for (var attempt = 0; attempt < 25; attempt++) {
+    _G = G; _grid = [];
+    for (var i = 0; i < G; i++) { _grid.push([]); for (var j = 0; j < G; j++) _grid[i].push(''); }
+
+    var ok = true, groups = [];
+    for (var li = 0; li < levelWords.length; li++) {
+      var entry = levelWords[li];
+      var dirsList = entry.cfg.dirs === 4 ? dirs4 : all8;
+      var sorted = entry.words.slice().sort(function(a, b) { return b.word.length - a.word.length; });
+      var placedThis = [];
+      for (var wi = 0; wi < sorted.length; wi++) {
+        var res = _tryPlaceB(sorted[wi].word, sorted[wi].clue, dirsList, entry.box);
+        if (!res) { ok = false; break; }
+        placedThis.push(res);
+      }
+      if (!ok) break;
+      groups.push({ level: entry.level, cfg: entry.cfg, box: entry.box, placed: placedThis, fakeouts: entry.fakeouts });
+    }
+    if (!ok) continue;
+
+    placedAll = [];
+    groups.forEach(function(g) { placedAll = placedAll.concat(g.placed); });
+    groupsFinal = groups;
+    break;
+  }
+
+  if (!placedAll) {
+    showError('Could not fit all words into their level boxes. Try shorter words or fewer per level.');
+    return;
+  }
+
+  var alpha = 'EARIOTNSHLRUDCYMFWGPBVKJXQZ';
+  var fillPool = alpha;
+  var biasGroups = groupsFinal.filter(function(g) { return g.cfg.bias; });
+  if (biasGroups.length) {
+    var letters = biasGroups.map(function(g) { return g.placed.map(function(p) { return p.word; }).join(''); }).join('');
+    fillPool = letters + letters + letters + alpha;
+  }
+  for (var r = 0; r < G; r++) {
+    for (var c = 0; c < G; c++) {
+      if (!_grid[r][c]) _grid[r][c] = fillPool[Math.floor(Math.random() * fillPool.length)];
+    }
+  }
+
+  puzzle = { theme: theme, G: G, grid: _grid, placed: placedAll, placedTheme: null, fakeouts: [], vg: true, groups: groupsFinal, boxes: boxes, cs: 20, fs: fs };
+  foundWords = new Set();
+  isRevealed = false;
+  renderVGPuzzle();
+}
+
+function wordListHTML(listMode, placed, fakeouts) {
+  var html = '';
+  if (listMode === 'words') {
+    html = '<div class="word-chips">';
+    for (var i = 0; i < placed.length; i++) {
+      html += '<span class="chip" id="chip-' + placed[i].word + '">' + placed[i].word + '</span>';
+    }
+    html += '</div>';
+  } else {
+    var clueList = shuffle(
+      placed.map(function(pp) { return { word: pp.word, clue: pp.clue || '(' + pp.word.length + ' letters)', isFakeout: false }; }).concat(
+      fakeouts.map(function(w) { return { word: w, clue: '(' + w.length + ' letters)', isFakeout: true }; }))
+    );
+    html = '<div class="clues-list">';
+    for (var ci = 0; ci < clueList.length; ci++) {
+      var item = clueList[ci];
+      var cls = item.isFakeout ? 'clue-item fakeout-row' : 'clue-item';
+      html += '<div class="' + cls + '" id="ci-' + item.word + '"><span class="clue-num">' + (ci + 1) + '.</span> ' + escHTML(item.clue) + '<span class="clue-letters">' + item.word.length + ' ltrs</span><div class="clue-answer">→ ' + item.word + '</div></div>';
+    }
+    html += '</div>';
+    if (fakeouts.length) {
+      html += '<div class="fakeout-note">' + fakeouts.length + ' fakeout word' + (fakeouts.length > 1 ? 's are' : ' is') + ' in the list but not in the grid.</div>';
+    }
+  }
+  return html;
+}
+
+function boxBorderStyle(r, c, boxes) {
+  var s = '';
+  for (var bi = 0; bi < boxes.length; bi++) {
+    var b = boxes[bi], cfg = VG_LEVELS[bi];
+    if (r === b.r0 && c >= b.c0 && c <= b.c1) s += 'border-top:2px solid ' + cfg.color + ';';
+    if (r === b.r1 && c >= b.c0 && c <= b.c1) s += 'border-bottom:2px solid ' + cfg.color + ';';
+    if (c === b.c0 && r >= b.r0 && r <= b.r1) s += 'border-left:2px solid ' + cfg.color + ';';
+    if (c === b.c1 && r >= b.r0 && r <= b.r1) s += 'border-right:2px solid ' + cfg.color + ';';
+  }
+  return s;
+}
+
+function renderVGPuzzle() {
+  var p = puzzle;
+  var G = p.G, grid = p.grid, cs = p.cs, fs = p.fs, boxes = p.boxes;
+
+  var gHTML = '<div class="grid" id="mainGrid">';
+  for (var r = 0; r < G; r++) {
+    gHTML += '<div class="grid-row">';
+    for (var c = 0; c < G; c++) {
+      // Zone = the smallest (innermost) box that contains this cell — boxes are ordered small to large.
+      var zoneIdx = boxes.length - 1;
+      for (var bi = 0; bi < boxes.length; bi++) {
+        var b = boxes[bi];
+        if (r >= b.r0 && r <= b.r1 && c >= b.c0 && c <= b.c1) { zoneIdx = bi; break; }
+      }
+      var zcfg = VG_LEVELS[zoneIdx];
+      var fontSet = FONT_SETS[Math.min(zcfg.fonts - 1, FONT_SETS.length - 1)];
+      var font = fontSet[Math.floor(Math.random() * fontSet.length)];
+      var wob = zcfg.wobble ? ((Math.random() - 0.5) * zcfg.wobble).toFixed(1) : 0;
+      var op = zcfg.wobble ? (0.62 + Math.random() * 0.38).toFixed(2) : 1;
+      var bold = zcfg.fonts > 1 && Math.random() > 0.55 ? 'bold' : 'normal';
+      var style = 'width:' + cs + 'px;height:' + cs + 'px;font-size:' + fs + 'px;font-family:' + font + ';font-weight:' + bold + ';transform:rotate(' + wob + 'deg);opacity:' + op + ';' + boxBorderStyle(r, c, boxes);
+      gHTML += '<div class="cell" data-r="' + r + '" data-c="' + c + '" style="' + style + '">' + grid[r][c] + '</div>';
+    }
+    gHTML += '</div>';
+  }
+  gHTML += '</div>';
+
+  var groupsHTML = '';
+  var totalWords = 0;
+  for (var gi = 0; gi < p.groups.length; gi++) {
+    var g = p.groups[gi];
+    totalWords += g.placed.length;
+    var badge = '<span class="diff-badge" style="color:' + g.cfg.color + ';background:' + g.cfg.color + '18;border:.5px solid ' + g.cfg.color + '55">' + g.cfg.name + '</span>';
+    groupsHTML += '<div style="margin-bottom:16px">' +
+        '<div class="sec-label">' + badge + '</div>' +
+        wordListHTML(g.cfg.listMode, g.placed, g.fakeouts) +
+      '</div>';
+  }
+
+  document.getElementById('puzzlePanel').innerHTML =
+    '<div class="print-toolbar">' +
+      '<button class="pt-btn primary" onclick="window.print()">🖨 Print</button>' +
+      '<button class="pt-btn" onclick="toggleReveal()" id="revealBtn">Reveal all</button>' +
+      '<button class="pt-btn" onclick="resetFound()">Reset</button>' +
+      '<span class="pt-hint">Print → Landscape, 100%, no margins</span>' +
+    '</div>' +
+    '<div class="puzzle-page">' +
+      '<div class="page-header">' +
+        '<div class="page-title">' + escHTML(p.theme) + ' <span class="diff-badge" style="color:var(--ink);background:#eee;border:.5px solid #ccc">Video Game Mode</span></div>' +
+        '<div class="page-meta">' + G + '×' + G + ' · ' + totalWords + ' words · 5 levels</div>' +
+      '</div>' +
+      '<div class="page-body">' +
+        '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
+        '<div class="words-side">' + groupsHTML + '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.querySelectorAll('.cell').forEach(function(cell) {
+    cell.addEventListener('click', function() { clickCell(cell); });
+  });
 }
 
 function renderPuzzle() {
@@ -756,6 +1092,12 @@ function escHTML(s) {
 
 buildDiffUI();
 for (var ii = 0; ii < 8; ii++) addWordRow();
+
+buildVGLevelsUI();
+for (var lv2 = 1; lv2 <= 5; lv2++) {
+  for (var vk = 0; vk < 4; vk++) addVGWordRow(lv2);
+  if (VG_LEVELS[lv2 - 1].fakeouts) { addVGFakeoutRow(lv2); addVGFakeoutRow(lv2); }
+}
 </script>
 </body>
 </html>
