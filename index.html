@@ -67,17 +67,23 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .error-msg.show{display:block}
 .error-msg.ok{background:#f1faf2;border-color:#a9d8b4;color:#1f7a3d}
 
-.puzzle-panel{flex:1;overflow-y:auto;padding:28px 32px;display:flex;flex-direction:column;align-items:flex-start}
+.puzzle-panel{flex:1;overflow:auto;padding:28px 32px;display:flex;flex-direction:column;align-items:center}
 .puzzle-placeholder{margin:auto;text-align:center;color:var(--rule);font-family:var(--serif);font-size:18px;font-style:italic;user-select:none}
 .puzzle-placeholder .big{font-size:64px;line-height:1;margin-bottom:16px;letter-spacing:4px}
-.print-toolbar{display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap}
+.print-toolbar{display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap;align-self:stretch}
 .pt-btn{padding:6px 14px;font-family:var(--body);font-size:13px;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);cursor:pointer;transition:all .15s}
 .pt-btn:hover{background:var(--paper2);border-color:var(--gold)}
 .pt-btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .pt-btn.primary:hover{background:#2e2c28}
 .pt-hint{font-size:11px;color:var(--muted);font-style:italic}
 
-.puzzle-page{background:#fff;border:1px solid var(--rule);box-shadow:3px 3px 12px rgba(0,0,0,.08);padding:28px 32px 24px;width:100%;max-width:980px}
+/* Fixed-page print engine: the page is pinned to a real 11x8.5in sheet, and
+   its content is scaled down (never up) to always fit inside it — one word
+   search is always exactly one printed page, no matter the grid size. The
+   whole sheet is then scaled again to fit the on-screen preview panel. */
+.sheet-scaler{transform-origin:top left}
+.puzzle-page{background:#fff;border:1px solid var(--rule);box-shadow:3px 3px 12px rgba(0,0,0,.08);box-sizing:border-box;width:11in;height:8.5in;padding:0.35in;margin:0;overflow:hidden}
+.page-inner{width:100%;transform-origin:top left}
 .page-header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:14px}
 .page-title{font-family:var(--serif);font-size:24px;font-weight:400}
 .page-meta{font-size:11px;color:#aaa;text-align:right;line-height:1.7;font-style:italic}
@@ -115,11 +121,13 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .csans{font-family:'Comic Sans MS','Chalkboard SE',cursive;font-size:11px;color:#111;font-style:normal}
 
 @media print{
-  @page{size:landscape;margin:0}
-  body{background:#fff}
+  @page{size:11in 8.5in;margin:0}
+  html,body{margin:0;padding:0;background:#fff}
   .app-header,.form-panel,.print-toolbar{display:none!important}
-  .puzzle-panel{padding:.25in .3in}
-  .puzzle-page{border:none;box-shadow:none;padding:0}
+  .app-body{display:block}
+  .puzzle-panel{display:block;padding:0;overflow:visible}
+  .sheet-scaler{transform:none!important;width:auto!important;height:auto!important;margin:0}
+  .puzzle-page{border:none;box-shadow:none;margin:0;width:11in;height:8.5in;padding:0.35in;overflow:hidden}
   .cell:hover{background:none!important}
   .cell.found,.cell.found-theme{background:rgba(150,150,150,.45)!important;border-radius:50%}
   .cell.decoy-reveal{box-shadow:none!important}
@@ -986,25 +994,32 @@ function renderVGPuzzle() {
 
   document.getElementById('puzzlePanel').innerHTML =
     '<div class="print-toolbar">' +
-      '<button class="pt-btn primary" onclick="window.print()">🖨 Print</button>' +
+      '<button class="pt-btn primary" onclick="window.print()">🖨 Print / Save PDF</button>' +
       '<button class="pt-btn" onclick="toggleReveal()" id="revealBtn">Reveal all</button>' +
       '<button class="pt-btn" onclick="resetFound()">Reset</button>' +
-      '<span class="pt-hint">Print → Landscape, 100%, no margins</span>' +
+      '<span class="pt-hint">Fixed 8.5×11 landscape · Print → 100%, margins None</span>' +
     '</div>' +
-    '<div class="puzzle-page">' +
-      '<div class="page-header">' +
-        '<div class="page-title">' + escHTML(p.theme) + ' <span class="diff-badge" style="color:var(--ink);background:#eee;border:.5px solid #ccc">Video Game Mode</span></div>' +
-        '<div class="page-meta">' + G + '×' + G + ' · ' + totalWords + ' words · 5 levels</div>' +
-      '</div>' +
-      '<div class="page-body">' +
-        '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
-        '<div class="words-side">' + groupsHTML + '</div>' +
+    '<div class="sheet-scaler" id="sheetScaler">' +
+      '<div class="puzzle-page">' +
+        '<div class="page-inner" id="pageInner">' +
+          '<div class="page-header">' +
+            '<div class="page-title">' + escHTML(p.theme) + ' <span class="diff-badge" style="color:var(--ink);background:#eee;border:.5px solid #ccc">Video Game Mode</span></div>' +
+            '<div class="page-meta">' + G + '×' + G + ' · ' + totalWords + ' words · 5 levels</div>' +
+          '</div>' +
+          '<div class="page-body">' +
+            '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
+            '<div class="words-side">' + groupsHTML + '</div>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
     '</div>';
 
   document.querySelectorAll('.cell').forEach(function(cell) {
     cell.addEventListener('click', function() { clickCell(cell); });
   });
+
+  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPage(); fitScreen(); });
+  else { fitPage(); fitScreen(); }
 }
 
 function renderPuzzle() {
@@ -1104,25 +1119,68 @@ function renderPuzzle() {
 
   document.getElementById('puzzlePanel').innerHTML =
     '<div class="print-toolbar">' +
-      '<button class="pt-btn primary" onclick="window.print()">🖨 Print</button>' +
+      '<button class="pt-btn primary" onclick="window.print()">🖨 Print / Save PDF</button>' +
       '<button class="pt-btn" onclick="toggleReveal()" id="revealBtn">Reveal all</button>' +
       '<button class="pt-btn" onclick="resetFound()">Reset</button>' +
-      '<span class="pt-hint">Print → Landscape, 100%, no margins</span>' +
+      '<span class="pt-hint">Fixed 8.5×11 landscape · Print → 100%, margins None</span>' +
     '</div>' +
-    '<div class="puzzle-page">' +
-      '<div class="page-header">' +
-        '<div class="page-title">' + pageTitle + ' ' + diffBadge + '</div>' +
-        '<div class="page-meta">' + G + '×' + G + ' · ' + placed.length + ' words · ' + diff.name + '</div>' +
-      '</div>' +
-      '<div class="page-body">' +
-        '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
-        '<div class="words-side">' + wHTML + bonusNote + sundayBlock + fakeoutNote + '</div>' +
+    '<div class="sheet-scaler" id="sheetScaler">' +
+      '<div class="puzzle-page">' +
+        '<div class="page-inner" id="pageInner">' +
+          '<div class="page-header">' +
+            '<div class="page-title">' + pageTitle + ' ' + diffBadge + '</div>' +
+            '<div class="page-meta">' + G + '×' + G + ' · ' + placed.length + ' words · ' + diff.name + '</div>' +
+          '</div>' +
+          '<div class="page-body">' +
+            '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
+            '<div class="words-side">' + wHTML + bonusNote + sundayBlock + fakeoutNote + '</div>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
     '</div>';
 
   document.querySelectorAll('.cell').forEach(function(cell) {
     cell.addEventListener('click', function() { clickCell(cell); });
   });
+
+  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPage(); fitScreen(); });
+  else { fitPage(); fitScreen(); }
+}
+
+// Shrink the page content so it always fits inside the fixed 8.5×11 sheet —
+// this is what guarantees the PDF is exactly one standard page every time,
+// no matter how big the grid or word list gets.
+function fitPage() {
+  var page = document.querySelector('.puzzle-page');
+  var inner = document.getElementById('pageInner');
+  if (!page || !inner) return;
+  inner.style.transform = 'none';
+  var cs = getComputedStyle(page);
+  var availW = page.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+  var availH = page.clientHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+  var cw = inner.scrollWidth, ch = inner.scrollHeight;
+  if (cw > 0 && ch > 0 && availW > 0 && availH > 0) {
+    var s = Math.min(1, availW / cw, availH / ch) * 0.99; // hair of safety margin
+    inner.style.transform = 'scale(' + s + ')';
+  }
+}
+// Scale the whole fixed sheet down so the preview fits the panel width on
+// screen (reset to 1:1 for printing via the print stylesheet).
+function fitScreen() {
+  var scaler = document.getElementById('sheetScaler');
+  var page = scaler && scaler.querySelector('.puzzle-page');
+  var panel = document.getElementById('puzzlePanel');
+  if (!page || !panel) return;
+  scaler.style.transform = 'none'; scaler.style.width = ''; scaler.style.height = '';
+  var ps = getComputedStyle(panel);
+  var avail = panel.clientWidth - parseFloat(ps.paddingLeft || 0) - parseFloat(ps.paddingRight || 0);
+  var pw = page.offsetWidth, ph = page.offsetHeight;
+  if (pw > 0 && avail > 0) {
+    var s = Math.min(1, avail / pw);
+    scaler.style.transform = 'scale(' + s + ')';
+    scaler.style.width = (pw * s) + 'px';
+    scaler.style.height = (ph * s) + 'px';
+  }
 }
 
 function clickCell(cell) {
@@ -1249,6 +1307,8 @@ buildVGLevelsUI();
 for (var lv2 = 1; lv2 <= 5; lv2++) {
   for (var vk = 0; vk < 4; vk++) addVGWordRow(lv2);
 }
+
+window.addEventListener('resize', function() { fitScreen(); });
 </script>
 </body>
 </html>
