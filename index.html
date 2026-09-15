@@ -12885,13 +12885,15 @@ function setOrientation(o) {
   document.body.classList.toggle('print-landscape', o === 'landscape');
   var styleEl = document.getElementById('pageSizeStyle');
   if (styleEl) styleEl.textContent = '@page{size:' + (o === 'landscape' ? '11in 8.5in' : '8.5in 11in') + ';margin:0}';
-  reRenderCurrentPuzzle();
+  var hint = document.querySelector('.pt-hint');
+  if (hint) hint.textContent = hint.textContent.replace(/^[\d.]+×[\d.]+in \w+/, o === 'landscape' ? '11×8.5in landscape' : '8.5×11in portrait');
+  refitCurrentPuzzle();
 }
 
 function setCluePosition(p) {
   printSettings.cluePosition = p;
   markToggleGroup(['posSideBtn', 'posBelowBtn'], p === 'below' ? 'posBelowBtn' : 'posSideBtn');
-  reRenderCurrentPuzzle();
+  refitCurrentPuzzle();
 }
 
 function onPrintSettingChange() {
@@ -12904,7 +12906,31 @@ function onPrintSettingChange() {
   printSettings.clueFontWeight = fam === 'large' ? '600' : '400';
   var cfsv = parseInt(document.getElementById('clueFontSizeInput').value, 10);
   printSettings.clueFontSize = Math.max(10, Math.min(32, isNaN(cfsv) ? 14 : cfsv));
-  reRenderCurrentPuzzle();
+  refitCurrentPuzzle();
+}
+
+// Print & Layout settings (cell/letter/clue size, font, position, orientation)
+// never change the puzzle's actual content — only how it's sized and laid
+// out — and fitPrintPage() already re-applies every one of them itself
+// (font family/weight/size, stacked-vs-beside, cell/letter size) to the
+// EXISTING DOM. Re-running the full render*Puzzle() functions instead would
+// tear down and rebuild the whole grid (thousands of cells on a large QR
+// puzzle) just to change a number, which re-triggers the same DOM/web-font
+// settling delay on every keystroke — visible as the puzzle shrinking and
+// snapping back on each change. This calls fitPrintPage() directly so a
+// settings tweak only resizes what's already there.
+function refitCurrentPuzzle() {
+  if (lastRenderedMode !== appMode) return; // nothing built for this mode yet — settings will apply on next Generate
+  if (appMode === 'daily' && puzzle) {
+    scheduleFit(function() { fitPrintPage(puzzle.G, puzzle.G, 0, applyStandardCellCss, 320); fitScreen(); });
+  } else if (appMode === 'vg') {
+    var G = VG_BOX_SIZES[VG_BOX_SIZES.length - 1];
+    scheduleFit(function() { fitPrintPage(G, G, 0, applyStandardCellCss, 170); fitScreen(); });
+  } else if (appMode === 'qr' && qrPuzzle) {
+    scheduleFit(function() { fitPrintPage(qrPuzzle.n, qrPuzzle.n, 4, applyQrCellCss, 110); fitScreen(); });
+  } else {
+    reRenderCurrentPuzzle();
+  }
 }
 
 function reRenderCurrentPuzzle() {
