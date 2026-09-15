@@ -219,6 +219,10 @@ body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
       <input type="number" id="cellSizeInput" value="26" min="10" max="50" onchange="onPrintSettingChange()">
     </div>
     <div class="setting-group" style="margin-bottom:10px">
+      <label>Grid letter size (% of cell) — how big the letters print inside each square</label>
+      <input type="number" id="letterSizeInput" value="58" min="35" max="95" onchange="onPrintSettingChange()">
+    </div>
+    <div class="setting-group" style="margin-bottom:10px">
       <label>Word/clue list font</label>
       <select id="clueFontSelect" onchange="onPrintSettingChange()">
         <option value="serif" selected>Serif (Georgia)</option>
@@ -12839,6 +12843,7 @@ var isRevealed = false;
 var printSettings = {
   orientation: 'portrait',   // 'portrait' | 'landscape'
   cellSize: 26,              // desired grid cell size in px (fitPrintPage clamps down only if it must)
+  letterFontRatio: 0.58,     // grid letter size, as a fraction of the actual cell size
   clueFontFamily: 'var(--body)',
   clueFontWeight: '400',
   clueFontSize: 14,          // px, applied to the whole word/clue list proportionally (see em-based CSS)
@@ -12881,6 +12886,8 @@ function setCluePosition(p) {
 function onPrintSettingChange() {
   var csv = parseInt(document.getElementById('cellSizeInput').value, 10);
   printSettings.cellSize = Math.max(10, Math.min(50, isNaN(csv) ? 26 : csv));
+  var lsv = parseInt(document.getElementById('letterSizeInput').value, 10);
+  printSettings.letterFontRatio = Math.max(35, Math.min(95, isNaN(lsv) ? 58 : lsv)) / 100;
   var fam = document.getElementById('clueFontSelect').value;
   printSettings.clueFontFamily = fam === 'sans' ? 'Arial, Helvetica, sans-serif' : fam === 'large' ? 'Verdana, Geneva, sans-serif' : 'var(--body)';
   printSettings.clueFontWeight = fam === 'large' ? '600' : '400';
@@ -12948,7 +12955,7 @@ function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
 
   var desired = printSettings.cellSize, minCS = 12;
   var cs = Math.max(minCS, Math.min(desired, Math.floor(gridW / (cols + chromeCells)), Math.floor(gridH / (rows + chromeCells))));
-  var fs = Math.max(7, Math.round(cs * 0.58));
+  var fs = Math.max(7, Math.round(cs * printSettings.letterFontRatio));
   applyCellCss(cs, fs);
 
   if (wordsFit) {
@@ -13182,7 +13189,8 @@ function gatherConfig() {
     version: 2,
     mode: appMode,
     theme: appMode === 'qr' ? document.getElementById('qrTitleInput').value : document.getElementById('themeInput').value,
-    cellSize: printSettings.cellSize
+    cellSize: printSettings.cellSize,
+    letterSize: Math.round(printSettings.letterFontRatio * 100)
   };
   if (appMode === 'vg') {
     cfg.vgLevels = [];
@@ -13243,8 +13251,12 @@ function applyConfig(cfg) {
   var csv = parseInt(cfg.cellSize, 10) || parseInt(cfg.fontSize, 10); // fontSize = old export field, kept as a fallback
   if (!isNaN(csv)) {
     document.getElementById('cellSizeInput').value = Math.max(10, Math.min(50, csv));
-    onPrintSettingChange();
   }
+  var lsv = parseInt(cfg.letterSize, 10);
+  if (!isNaN(lsv)) {
+    document.getElementById('letterSizeInput').value = Math.max(35, Math.min(95, lsv));
+  }
+  onPrintSettingChange();
 
   if (appMode === 'qr') {
     if (typeof cfg.qrContent === 'string') document.getElementById('qrContent').value = cfg.qrContent.slice(0, 120);
@@ -13412,7 +13424,7 @@ function buildPuzzle() {
   var theme = document.getElementById('themeInput').value.trim() || 'Word Search';
   var G = diff.gridSize;
   var cs = diff.cellSize; // placeholder — fitPrintPage() recomputes the real size at render time
-  var fs = Math.round(cs * 0.58);
+  var fs = Math.round(cs * printSettings.letterFontRatio);
 
   var rawWords = getWords();
   if (rawWords.length < 2) { showError('Please enter at least 2 words.'); return; }
@@ -13568,7 +13580,7 @@ function buildPuzzle() {
 
 function buildVGPuzzle() {
   var theme = document.getElementById('themeInput').value.trim() || 'Word Search';
-  var fs = Math.round(printSettings.cellSize * 0.58); // placeholder — fitPrintPage() recomputes the real size at render time
+  var fs = Math.round(printSettings.cellSize * printSettings.letterFontRatio); // placeholder — fitPrintPage() recomputes the real size at render time
   var G = VG_BOX_SIZES[VG_BOX_SIZES.length - 1];
 
   var boxes = VG_BOX_SIZES.map(function(size) {
@@ -14495,7 +14507,7 @@ function qrBuildPuzzle(){
   qrPuzzle = {
     text:text, title:title, ec:ec, n:m.n, dark:m.dark, chars:chars,
     placements:layout.placements, wordCells:wordCells, cellOwners:cellOwners,
-    listMode:qrListMode, cs:cs, fs:Math.max(7, Math.round(cs*0.58))
+    listMode:qrListMode, cs:cs, fs:Math.max(7, Math.round(cs*printSettings.letterFontRatio))
   };
   qrFoundWords = new Set();
   qrIsRevealed = false;
