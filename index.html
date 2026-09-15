@@ -145,6 +145,7 @@ body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
 .complete-banner{display:none;margin-bottom:14px;padding:9px 14px;background:#f0faf4;border:1px solid #a3d4b0;border-radius:5px;font-size:14px;color:#1a5c30}
 .complete-banner.show{display:block}
 .instructions{font-size:12.5px;line-height:1.65;margin-bottom:14px;padding:9px 13px;background:#faf9f7;border:1px solid #eee;border-left:3px solid var(--gold);border-radius:3px}
+.instructions.compact{font-size:10.5px;line-height:1.4;margin-bottom:8px;padding:5px 10px}
 .instructions strong{font-family:var(--serif);font-weight:600}
 .instructions ol{margin:4px 0 0 18px}
 .quiet-zone{background:#fff;display:inline-block;border:1px solid var(--rule);print-color-adjust:exact;-webkit-print-color-adjust:exact}
@@ -12989,31 +12990,32 @@ function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
     }
   }
 
-  // Final safety net: the budgeting above is an estimate (measured before
-  // fonts/wrapping fully settle), so it can still leave the page a little
-  // taller than it has room for — especially for a large grid with a long
-  // word list, where every earlier reservation is already near its limit.
-  // Rather than let .puzzle-page's overflow:hidden silently clip the
-  // bottom of the word/clue list (which is what was happening), do one
-  // last measure-and-correct pass. No floor here on purpose: a page that's
-  // uniformly smaller but complete is always better than one with content
-  // missing off the edge.
+  // Final correction pass: if things still don't fit, shrink the grid's
+  // real cs/fs via applyCellCss instead of a page-wide CSS transform. A
+  // transform leaves blank space at the bottom of the page (the box looks
+  // smaller but the layout never gets that room back) and it silently
+  // halves the effect of any letter-size change layered on top of it.
+  // Header, instructions and the word list already have their final real
+  // sizes at this point — only the grid gives here.
   var pageInner = document.getElementById('pageInner');
-  var safetyScale = 1;
+  var preSafetyCs = cs;
   if (pageInner) {
     pageInner.style.transform = 'none';
-    var innerAvailH = page.clientHeight - parseFloat(pcs.paddingTop || 0) - parseFloat(pcs.paddingBottom || 0);
-    var overflowPx = pageInner.scrollHeight - innerAvailH;
-    if (overflowPx > 1) {
-      safetyScale = Math.max(0.25, innerAvailH / pageInner.scrollHeight);
-      pageInner.style.transform = 'scale(' + safetyScale + ')';
+    for (var pass = 0; pass < 8; pass++) {
+      var innerAvailH = page.clientHeight - parseFloat(pcs.paddingTop || 0) - parseFloat(pcs.paddingBottom || 0);
+      var overflowPx = pageInner.scrollHeight - innerAvailH;
+      if (overflowPx <= 1 || cs <= 6) break;
+      var shrink = innerAvailH / pageInner.scrollHeight;
+      cs = Math.max(6, Math.min(cs - 1, Math.floor(cs * shrink)));
+      fs = Math.max(5, Math.round(cs * printSettings.letterFontRatio));
+      applyCellCss(cs, fs);
     }
   }
 
   if (warnEl) {
-    if (safetyScale < 0.97) {
+    if (cs < preSafetyCs) {
       warnEl.style.display = 'block';
-      warnEl.textContent = 'This puzzle (' + rows + '×' + cols + ' grid, plus the word list) is too big for one page at full size, so everything was shrunk about ' + Math.round((1 - safetyScale) * 100) + '% to fit. For a bigger, more readable result: use fewer or shorter words' + (appMode === 'qr' ? ', or a lower error-correction level' : '') + ' — the grid is square, so switching orientation won\'t help.';
+      warnEl.textContent = 'This puzzle (' + rows + '×' + cols + ' grid, plus the word list) is too big for one page at full size, so the grid was shrunk to ' + cs + 'px to fit everything without cutting anything off. For a bigger, more readable result: use fewer or shorter words' + (appMode === 'qr' ? ', or a lower error-correction level' : '') + ' — the grid is square, so switching orientation won\'t help.';
     } else if (cs < desired) {
       warnEl.style.display = 'block';
       warnEl.textContent = 'Grid cells shrunk to ' + cs + 'px to fit one page (you asked for ' + desired + 'px). Try moving the word list below the grid, or using fewer/shorter words' + (appMode === 'qr' ? ' or a lower error-correction level' : '') + ' — the grid is square, so switching orientation won\'t help.';
@@ -14587,13 +14589,7 @@ function qrRenderPuzzle(){
             '<div class="page-title">'+escHTML(p.title)+' <span class="diff-badge" style="color:var(--ink);background:#eee;border:.5px solid #ccc">QR Code Mode</span></div>'+
             '<div class="page-meta">'+n+'&times;'+n+' &middot; '+p.placements.length+' words &middot; '+letterCount+' missing squares &middot; EC '+p.ec+'</div>'+
           '</div>'+
-          '<div class="instructions page-preamble"><strong>This word search is a QR code with missing pieces.</strong>'+
-            '<ol>'+
-            '<li>Find every listed word in the white squares &mdash; horizontal, vertical or diagonal, forwards or backwards.</li>'+
-            '<li>Shade each found word’s squares <em>completely</em> with a black marker or dark pen.</li>'+
-            '<li>When all the words are shaded, the code is whole &mdash; scan it with a phone camera to reveal the secret.</li>'+
-            '</ol>'+
-            'The solid black squares are already done for you. Shade only real finds &mdash; stray marks can break the code.</div>'+
+          '<div class="instructions page-preamble compact">Find each word below (any direction), shade its squares in completely, then scan when all are found &mdash; black squares are already done; stray marks can break the code.</div>'+
           '<div class="page-body">'+
             '<div class="grid-side"><div class="grid-label">QR Code</div><div class="quiet-zone" id="qrQuietZone" style="padding:'+quietPad+'px">'+gHTML+'</div>'+
               '<div class="page-foot">solve &middot; shade &middot; scan</div>'+
