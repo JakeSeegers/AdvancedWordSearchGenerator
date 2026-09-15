@@ -154,6 +154,7 @@ body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
 .qcell.lt{background:#fff;color:#111;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.13);cursor:pointer;align-items:flex-start;padding-top:calc(var(--cs)*0.07);line-height:1}
 .qcell.lt:hover{background:rgba(184,146,42,.18)}
 .qcell.dk{background:#000}
+.qcell.gr{background:#c7c2b4;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.13)}
 .qcell.lt.shaded{background:#000;color:transparent;box-shadow:none}
 .qcell.lt.shaded:hover{background:#000}
 .qcell.lt.revealed{background:rgba(184,146,42,.5);color:#111}
@@ -14349,7 +14350,7 @@ function qrFillAndScrub(m, layout, words, wordCells){
     var row = [], vrow = [];
     for(var c=0;c<n;c++){
       var k = qrCkey(r,c);
-      var vis = !m.dark[r][c] || wordCells[k];
+      var vis = wordCells[k]; // only real word cells carry letters — everything else stays plain, so the puzzle isn't buried in decoy letters
       vrow.push(vis);
       if(!vis) row.push('');
       else row.push(layout.letters[k] !== undefined ? layout.letters[k] : pool[Math.floor(Math.random()*pool.length)]);
@@ -14524,7 +14525,8 @@ function qrRenderPuzzle(){
     for(var c=0;c<n;c++){
       var k = qrCkey(r,c);
       var isDk = p.dark[r][c] && !p.wordCells[k];
-      gHTML += '<div class="qcell '+(isDk?'dk':'lt')+'" data-r="'+r+'" data-c="'+c+'">'+p.chars[r][c]+'</div>';
+      var cls = isDk ? 'dk' : (p.wordCells[k] ? 'lt' : 'gr');
+      gHTML += '<div class="qcell '+cls+'" data-r="'+r+'" data-c="'+c+'">'+p.chars[r][c]+'</div>';
     }
     gHTML += '</div>';
   }
@@ -14565,7 +14567,7 @@ function qrRenderPuzzle(){
             '<li>Shade each found word’s squares <em>completely</em> with a black marker or dark pen.</li>'+
             '<li>When all the words are shaded, the code is whole &mdash; scan it with a phone camera to reveal the secret.</li>'+
             '</ol>'+
-            'The solid black squares are already done for you. Shade only real finds &mdash; stray marks can break the code.</div>'+
+            'The solid black squares are already done for you, and the gray squares are just part of the code\'s pattern &mdash; nothing to find there. Shade only real finds &mdash; stray marks can break the code.</div>'+
           '<div class="page-body">'+
             '<div class="grid-side"><div class="grid-label">QR Code</div><div class="quiet-zone" id="qrQuietZone" style="padding:'+quietPad+'px">'+gHTML+'</div>'+
               '<div class="page-foot">solve &middot; shade &middot; scan</div>'+
