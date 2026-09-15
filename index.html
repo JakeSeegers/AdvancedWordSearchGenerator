@@ -318,6 +318,15 @@ body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
     </div>
 
     <div class="fp-section">
+      <div class="fp-label">Decoy Letters</div>
+      <div class="setting-group">
+        <label>% of background squares filled with a decoy letter (rest print as plain gray)</label>
+        <input type="number" id="qrDecoyDensityInput" value="100" min="0" max="100" onchange="onQrDecoyDensityChange()">
+      </div>
+      <div class="fakeout-hint">100% is a traditional, fully-searchable word search. Lower this on a big grid to cut down on visual clutter &mdash; the words themselves are always fully lettered either way.</div>
+    </div>
+
+    <div class="fp-section">
       <div class="fp-label">Hidden Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(3&ndash;20 letters, aim for 4+ words)</span></div>
       <div class="setting-group" style="margin-bottom:9px">
         <label>List style</label>
@@ -13204,6 +13213,7 @@ function gatherConfig() {
     cfg.qrContent = document.getElementById('qrContent').value;
     cfg.qrTitle = document.getElementById('qrTitleInput').value;
     cfg.qrEc = document.getElementById('qrEcSelect').value;
+    cfg.qrDecoyDensity = qrDecoyDensity;
     cfg.qrListMode = qrListMode;
     cfg.words = Array.from(document.querySelectorAll('#qrWordEntries .w-word')).map(function(inp) {
       return inp.value;
@@ -13264,6 +13274,9 @@ function applyConfig(cfg) {
     if (typeof cfg.qrTitle === 'string') document.getElementById('qrTitleInput').value = cfg.qrTitle.slice(0, 60);
     else if (typeof cfg.theme === 'string') document.getElementById('qrTitleInput').value = cfg.theme.slice(0, 60);
     if (['L', 'M', 'Q', 'H'].indexOf(cfg.qrEc) !== -1) document.getElementById('qrEcSelect').value = cfg.qrEc;
+    var ddv = parseInt(cfg.qrDecoyDensity, 10);
+    document.getElementById('qrDecoyDensityInput').value = isNaN(ddv) ? 100 : Math.max(0, Math.min(100, ddv));
+    onQrDecoyDensityChange();
     setQrListMode(cfg.qrListMode === 'numbered' || cfg.qrListMode === 'clues' ? 'numbered' : 'words');
     if (Array.isArray(cfg.words)) {
       document.getElementById('qrWordEntries').innerHTML = '';
@@ -14224,6 +14237,14 @@ function setQrListMode(mode){
   if (qrPuzzle) { qrPuzzle.listMode = mode; qrRenderPuzzle(); }
 }
 
+// Changes which letters are shown, not just how they're styled, so it
+// needs a real rebuild (re-running qrFillAndScrub) rather than a re-render.
+function onQrDecoyDensityChange(){
+  var v = parseInt(document.getElementById('qrDecoyDensityInput').value, 10);
+  qrDecoyDensity = Math.max(0, Math.min(100, isNaN(v) ? 100 : v));
+  if (qrPuzzle) qrBuildPuzzle();
+}
+
 function qrAddWordRow(word){
   word = word || '';
   var container = document.getElementById('qrWordEntries');
@@ -14342,15 +14363,19 @@ function qrTryLayout(words, runs){
 // accidental copy of a target word — a solver who shades a false find
 // would darken white modules and damage the code. Solid black modules
 // carry no letters, so only unbroken white-cell lines can form words.
-function qrFillAndScrub(m, layout, words, wordCells){
+function qrFillAndScrub(m, layout, words, wordCells, decoyDensity){
   var n = m.n, chars = [], locked = {}, visible = [];
+  if (decoyDensity === undefined) decoyDensity = 100;
   Object.keys(layout.letters).forEach(function(k){ locked[k] = true; });
   var pool = words.join('') + words.join('') + 'ETAOINSHRDLUCMFWYPVBGKQJXZ';
   for(var r=0;r<n;r++){
     var row = [], vrow = [];
     for(var c=0;c<n;c++){
       var k = qrCkey(r,c);
-      var vis = wordCells[k]; // only real word cells carry letters — everything else stays plain, so the puzzle isn't buried in decoy letters
+      // Word cells always carry their real letter; other light squares get a
+      // decoy letter only decoyDensity% of the time — the rest print as
+      // plain gray so a huge grid isn't wall-to-wall random letters.
+      var vis = wordCells[k] || (!m.dark[r][c] && Math.random()*100 < decoyDensity);
       vrow.push(vis);
       if(!vis) row.push('');
       else row.push(layout.letters[k] !== undefined ? layout.letters[k] : pool[Math.floor(Math.random()*pool.length)]);
@@ -14432,6 +14457,7 @@ function qrCellsOf(layout){
 
 // ── build ──
 var qrPuzzle = null, qrFoundWords = new Set(), qrIsRevealed = false;
+var qrDecoyDensity = 100; // % of non-word light modules that get a decoy letter instead of plain gray
 
 function qrBuildPuzzle(){
   document.getElementById('errorMsg').classList.remove('show');
@@ -14502,7 +14528,7 @@ function qrBuildPuzzle(){
       (cellOwners[k] = cellOwners[k] || []).push(idx);
     });
   });
-  var chars = qrFillAndScrub(m, layout, words, wordCells);
+  var chars = qrFillAndScrub(m, layout, words, wordCells, qrDecoyDensity);
 
   var cs = printSettings.cellSize; // placeholder — fitPrintPage() recomputes the real size at render time
   qrPuzzle = {
@@ -14525,7 +14551,7 @@ function qrRenderPuzzle(){
     for(var c=0;c<n;c++){
       var k = qrCkey(r,c);
       var isDk = p.dark[r][c] && !p.wordCells[k];
-      var cls = isDk ? 'dk' : (p.wordCells[k] ? 'lt' : 'gr');
+      var cls = isDk ? 'dk' : (p.chars[r][c] ? 'lt' : 'gr');
       gHTML += '<div class="qcell '+cls+'" data-r="'+r+'" data-c="'+c+'">'+p.chars[r][c]+'</div>';
     }
     gHTML += '</div>';
@@ -14567,7 +14593,7 @@ function qrRenderPuzzle(){
             '<li>Shade each found word’s squares <em>completely</em> with a black marker or dark pen.</li>'+
             '<li>When all the words are shaded, the code is whole &mdash; scan it with a phone camera to reveal the secret.</li>'+
             '</ol>'+
-            'The solid black squares are already done for you, and the gray squares are just part of the code\'s pattern &mdash; nothing to find there. Shade only real finds &mdash; stray marks can break the code.</div>'+
+            'The solid black squares are already done for you. Shade only real finds &mdash; stray marks can break the code.</div>'+
           '<div class="page-body">'+
             '<div class="grid-side"><div class="grid-label">QR Code</div><div class="quiet-zone" id="qrQuietZone" style="padding:'+quietPad+'px">'+gHTML+'</div>'+
               '<div class="page-foot">solve &middot; shade &middot; scan</div>'+
