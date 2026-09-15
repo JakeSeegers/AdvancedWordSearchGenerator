@@ -150,10 +150,10 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
   </div>
 
   <div class="fp-section">
-    <div class="fp-label">Hidden Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(3&ndash;12 letters, aim for 4+ words)</span></div>
+    <div class="fp-label">Hidden Words <span style="font-size:10px;color:#bbb;font-style:italic;letter-spacing:0;text-transform:none">(3&ndash;20 letters, aim for 4+ words)</span></div>
     <div class="word-entries" id="wordEntries"></div>
     <button class="add-word-btn" onclick="addWordRow()">+ add another word</button>
-    <div class="fp-hint">Words are hidden only along the QR code's missing dark squares &mdash; long words (8+) may not fit. More total letters = a more broken, safer unsolved code.</div>
+    <div class="fp-hint">Words are hidden only along the QR code's missing dark squares &mdash; the code grows to make room for longer or more words, but very long words may still not fit. More total letters = a more broken, safer unsolved code.</div>
   </div>
 
   <div class="error-msg" id="errorMsg"></div>
@@ -12709,7 +12709,7 @@ function addWordRow(word){
   div.className = 'word-entry';
   div.innerHTML =
     '<span class="entry-num">'+n+'</span>'+
-    '<input type="text" maxlength="12" value="'+escHTML(word)+'" placeholder="WORD" '+
+    '<input type="text" maxlength="20" value="'+escHTML(word)+'" placeholder="WORD" '+
       'oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">'+
     '<button class="del-btn" onclick="removeRow(this)" title="Remove">&times;</button>';
   container.appendChild(div);
@@ -12934,7 +12934,7 @@ function buildPuzzle(){
   catch(e){ showError('That message is too long to encode — shorten it.'); return; }
 
   var layout = null, m = null, fallback = null;
-  var maxType = Math.min(t0+4, 40);
+  var maxType = Math.min(t0+16, 40);
   var longestWord = words.slice().sort(function(x,y){return y.length-x.length;})[0].length;
   outer:
   for(var type=t0; type<=maxType; type++){
