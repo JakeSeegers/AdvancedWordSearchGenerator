@@ -13003,10 +13003,10 @@ function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
   if (warnEl) {
     if (safetyScale < 0.97) {
       warnEl.style.display = 'block';
-      warnEl.textContent = 'This puzzle (' + rows + '×' + cols + ' grid, plus the word list) is too big for one page at full size, so everything was shrunk about ' + Math.round((1 - safetyScale) * 100) + '% to fit. For a bigger, more readable result: use fewer or shorter words, a lower error-correction level, or landscape orientation.';
+      warnEl.textContent = 'This puzzle (' + rows + '×' + cols + ' grid, plus the word list) is too big for one page at full size, so everything was shrunk about ' + Math.round((1 - safetyScale) * 100) + '% to fit. For a bigger, more readable result: use fewer or shorter words' + (appMode === 'qr' ? ', or a lower error-correction level' : '') + ' — the grid is square, so switching orientation won\'t help.';
     } else if (cs < desired) {
       warnEl.style.display = 'block';
-      warnEl.textContent = 'Grid cells shrunk to ' + cs + 'px to fit one page (you asked for ' + desired + 'px). Try switching orientation, moving the word list below the grid, or using fewer/shorter words.';
+      warnEl.textContent = 'Grid cells shrunk to ' + cs + 'px to fit one page (you asked for ' + desired + 'px). Try moving the word list below the grid, or using fewer/shorter words' + (appMode === 'qr' ? ' or a lower error-correction level' : '') + ' — the grid is square, so switching orientation won\'t help.';
     } else {
       warnEl.style.display = 'none';
     }
