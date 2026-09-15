@@ -796,6 +796,16 @@ var qrcode = function() {
       makeImpl(false, getBestMaskPattern() );
     };
 
+    // Build with a caller-chosen mask instead of the scanner-optimal one
+    // getBestMaskPattern() would pick. Used by the word-search puzzle to
+    // try all 8 masks at a given QR version and keep whichever happens to
+    // lay out the longest straight run of dark modules — since a puzzle
+    // only needs to scan cleanly once solved (checked separately), not to
+    // have the single most robust-looking pattern.
+    _this.makeWithMask = function(maskPattern) {
+      makeImpl(false, maskPattern);
+    };
+
     _this.createTableTag = function(cellSize, margin) {
 
       cellSize = cellSize || 2;
@@ -14187,10 +14197,11 @@ function qrGetWords(){
 }
 
 // ── QR matrix ──
-function qrBuildMatrix(text, ec, type){
+function qrBuildMatrix(text, ec, type, mask){
   var qr = qrcode(type, ec);
   qr.addData(text);
-  qr.make();
+  if(mask === undefined) qr.make();
+  else qr.makeWithMask(mask);
   var n = qr.getModuleCount(), dark = [];
   for(var r=0;r<n;r++){
     var row = [];
@@ -14391,24 +14402,38 @@ function qrBuildPuzzle(){
   var layout = null, m = null, fallback = null;
   var maxType = Math.min(t0+16, 40);
   var longestWord = words.slice().sort(function(x,y){return y.length-x.length;})[0].length;
+  // Each QR version normally only gets ONE try: qrcode.make() auto-picks
+  // whichever of the 8 mask patterns scans most cleanly, which has nothing
+  // to do with how long its straight runs of dark modules are — the only
+  // thing that matters for hiding words. So a version can easily have a
+  // long enough run under a *different* mask and still get rejected,
+  // forcing growth to a much bigger grid than the words actually need.
+  // Trying all 8 masks per version (cheaply skipping ones with too-short
+  // runs before the expensive placement search) fixes that.
+  var maskOrder = [0,1,2,3,4,5,6,7];
   outer:
   for(var type=t0; type<=maxType; type++){
-    var mm;
-    try{ mm = qrBuildMatrix(text, ec, type); }catch(e){ break; }
-    var runs = qrFindRuns(mm.dark, mm.n);
-    var longest = 0;
-    for(var ri=0;ri<runs.length;ri++) if(runs[ri].length > longest) longest = runs[ri].length;
-    if(longest < longestWord) continue;
-    var sampled = 0;
-    for(var att=0; att<80; att++){
-      var L = qrTryLayout(words, runs);
-      if(!L) continue;
-      fallback = { L:L, m:mm };
-      // keep resampling until this placement actually breaks the unsolved code
-      if(qrPreScanBroken(mm, qrCellsOf(L))){ layout = L; m = mm; break outer; }
-      if(++sampled >= 15) break;
+    var typeFits = false;
+    for(var mi=0; mi<maskOrder.length; mi++){
+      var mm;
+      try{ mm = qrBuildMatrix(text, ec, type, maskOrder[mi]); }catch(e){ break outer; }
+      var runs = qrFindRuns(mm.dark, mm.n);
+      var longest = 0;
+      for(var ri=0;ri<runs.length;ri++) if(runs[ri].length > longest) longest = runs[ri].length;
+      if(longest < longestWord) continue;
+      var sampled = 0;
+      for(var att=0; att<80; att++){
+        var L = qrTryLayout(words, runs);
+        if(!L) continue;
+        typeFits = true;
+        fallback = { L:L, m:mm };
+        // keep resampling until this placement actually breaks the unsolved code
+        if(qrPreScanBroken(mm, qrCellsOf(L))){ layout = L; m = mm; break outer; }
+        if(++sampled >= 15) break;
+      }
+      if(typeFits) break; // this mask already fits every word — no need to try the others
     }
-    if(fallback) break; // words fit at this size — a bigger grid would only make pre-scan easier
+    if(typeFits) break; // words fit at this size — a bigger grid would only make pre-scan easier
   }
   if(!layout && fallback){ layout = fallback.L; m = fallback.m; }
   if(!layout){
