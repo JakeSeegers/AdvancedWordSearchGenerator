@@ -77,18 +77,26 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .pt-btn.primary:hover{background:#2e2c28}
 .pt-hint{font-size:11px;color:var(--muted);font-style:italic}
 
-/* Fixed-page print engine: the page is pinned to a real 11x8.5in sheet, and
-   its content is scaled down (never up) to always fit inside it — one word
-   search is always exactly one printed page, no matter the grid size. The
-   whole sheet is then scaled again to fit the on-screen preview panel. */
+/* Flexible print engine: the page is pinned to a real 8.5x11in sheet
+   (portrait by default; body.print-landscape flips it to 11x8.5in), and
+   the grid claims space first — it's sized as large as the page and the
+   user's chosen cell size allow, then the word/clue list gets whatever
+   space is left and only that list is scaled down further if it still
+   doesn't fit. One puzzle is always exactly one printed page, but the
+   grid itself is never crushed to fit — see fitPrintPage(). The whole
+   sheet is then scaled again (separately) to fit the on-screen preview. */
 .sheet-scaler{transform-origin:top left}
 .words-fit{transform-origin:top left}
-.puzzle-page{background:#fff;border:1px solid var(--rule);box-shadow:3px 3px 12px rgba(0,0,0,.08);box-sizing:border-box;width:11in;height:8.5in;padding:0.35in;margin:0;overflow:hidden}
+.puzzle-page{background:#fff;border:1px solid var(--rule);box-shadow:3px 3px 12px rgba(0,0,0,.08);box-sizing:border-box;width:8.5in;height:11in;padding:0.4in;margin:0;overflow:hidden}
+body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
 .page-inner{width:100%;transform-origin:top left}
 .page-header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:14px}
 .page-title{font-family:var(--serif);font-size:24px;font-weight:400}
 .page-meta{font-size:11px;color:#aaa;text-align:right;line-height:1.7;font-style:italic}
+.page-preamble{margin-bottom:12px}
 .page-body{display:flex;gap:28px;align-items:flex-start}
+.page-body.stacked{flex-direction:column;align-items:stretch}
+.page-body.stacked .grid-side{align-self:center}
 .grid-side{flex:0 0 auto}
 .grid-label{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:5px}
 .grid{display:inline-block;border:1.5px solid var(--ink);border-radius:2px;padding:3px;line-height:0;cursor:default}
@@ -99,19 +107,22 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .cell.decoy-reveal{box-shadow:inset 0 0 0 2px var(--red)}
 .cell.found-theme{background:rgba(42,102,66,.4);border-radius:50%}
 .words-side{flex:1}
-.sec-label{font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee}
+.page-body.stacked .words-side{width:100%}
+/* clue/word-list text below uses em units so the print-settings font-size
+   control scales every part of the list together, proportionally */
+.sec-label{font-size:0.83em;text-transform:uppercase;letter-spacing:.9px;color:#aaa;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #eee}
 .word-chips{display:flex;flex-wrap:wrap;gap:5px}
-.chip{font-size:11px;padding:3px 9px;border-radius:10px;background:#f1efe8;border:.5px solid #ccc;font-family:'Courier New',monospace;transition:all .25s}
+.chip{font-size:0.92em;padding:3px 9px;border-radius:10px;background:#f1efe8;border:.5px solid #ccc;font-family:'Courier New',monospace;transition:all .25s}
 .chip.found-chip{background:#d4edda;color:#1a5c30;border-color:#a3d4b0;text-decoration:line-through}
 .clues-list{display:flex;flex-direction:column;gap:4px}
-.clue-item{padding:5px 8px;border-radius:3px;border-left:2px solid #e0dbd0;background:#faf9f7;line-height:1.5;font-size:12px;transition:all .2s}
+.clue-item{padding:5px 8px;border-radius:3px;border-left:2px solid #e0dbd0;background:#faf9f7;line-height:1.5;font-size:1em;transition:all .2s}
 .clue-item.found-clue{border-left-color:var(--green);background:#f0faf4}
 .clue-num{color:#aaa;margin-right:3px;font-style:italic}
-.clue-letters{color:#ccc;margin-left:4px;font-size:10px}
-.clue-answer{font-family:'Courier New',monospace;color:var(--green);margin-top:3px;font-size:11px;display:none}
+.clue-letters{color:#ccc;margin-left:4px;font-size:0.83em}
+.clue-answer{font-family:'Courier New',monospace;color:var(--green);margin-top:3px;font-size:0.92em;display:none}
 .clue-item.revealed-clue .clue-answer{display:block}
-.bonus-note{font-size:11px;color:#2a5c3a;background:#f0faf4;border:.5px solid #a3d4b0;border-radius:3px;padding:6px 9px;margin-bottom:9px;line-height:1.5}
-.fakeout-note{font-size:11px;color:#7a5c20;background:#fffbf0;border:.5px solid #d4b870;border-radius:3px;padding:5px 8px;margin-bottom:9px;font-style:italic}
+.bonus-note{font-size:0.92em;color:#2a5c3a;background:#f0faf4;border:.5px solid #a3d4b0;border-radius:3px;padding:6px 9px;margin-bottom:9px;line-height:1.5}
+.fakeout-note{font-size:0.92em;color:#7a5c20;background:#fffbf0;border:.5px solid #d4b870;border-radius:3px;padding:5px 8px;margin-bottom:9px;font-style:italic}
 .diff-badge{display:inline-flex;align-items:center;font-size:11px;padding:2px 8px;border-radius:8px;margin-left:8px;font-family:var(--body);font-style:italic;vertical-align:middle}
 .sunday-block{font-size:11px;color:#1a1040;background:#f3eeff;border:1px solid #c4a8e8;border-radius:4px;padding:10px 12px;margin-bottom:10px;line-height:1.7}
 .sunday-block p{margin:0 0 6px 0}
@@ -150,23 +161,24 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
 .page-foot{margin-top:16px;font-size:11px;color:#aaa;font-style:italic}
 
 @media print{
-  @page{size:11in 8.5in;margin:0}
   html,body{margin:0;padding:0;background:#fff}
   .app-header,.form-panel,.print-toolbar{display:none!important}
   .app-body{display:block}
   .puzzle-panel{display:block;padding:0;overflow:visible}
   .sheet-scaler{transform:none!important;width:auto!important;height:auto!important;margin:0}
-  .puzzle-page{border:none;box-shadow:none;margin:0;width:11in;height:8.5in;padding:0.35in;overflow:hidden}
+  .puzzle-page{border:none;box-shadow:none;margin:0;width:8.5in;height:11in;padding:0.4in;overflow:hidden}
+  body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
   .cell:hover{background:none!important}
   .cell.found,.cell.found-theme{background:rgba(150,150,150,.45)!important;border-radius:50%}
   .cell.decoy-reveal{box-shadow:none!important}
   .clue-answer{display:none!important}
-  .verify-strip,.complete-banner{display:none!important}
+  .verify-strip,.complete-banner,#printFitWarning{display:none!important}
   .qcell.lt:hover{background:#fff}
   .qcell.lt.shaded{background:#000!important}
   .qcell.lt.revealed{background:rgba(184,146,42,.5)!important}
 }
 </style>
+<style id="pageSizeStyle">@page{size:8.5in 11in;margin:0}</style>
 </head>
 <body>
 
@@ -193,19 +205,46 @@ body{font-family:var(--body);background:var(--paper);color:var(--ink);min-height
     <div class="diff-desc" id="modeDesc">Seven day-of-week difficulty tiers, one puzzle each.</div>
   </div>
 
+  <div class="fp-section">
+    <div class="fp-label">Print &amp; Layout</div>
+    <div class="setting-group" style="margin-bottom:10px">
+      <label>Page orientation</label>
+      <div class="day-tabs">
+        <button class="daytab selected" id="orientPortraitBtn" onclick="setOrientation('portrait')">Portrait 8.5×11</button>
+        <button class="daytab" id="orientLandscapeBtn" onclick="setOrientation('landscape')">Landscape 11×8.5</button>
+      </div>
+    </div>
+    <div class="setting-group" style="margin-bottom:10px">
+      <label>Grid cell size (px) — bigger is more readable</label>
+      <input type="number" id="cellSizeInput" value="26" min="10" max="50" onchange="onPrintSettingChange()">
+    </div>
+    <div class="setting-group" style="margin-bottom:10px">
+      <label>Word/clue list font</label>
+      <select id="clueFontSelect" onchange="onPrintSettingChange()">
+        <option value="serif" selected>Serif (Georgia)</option>
+        <option value="sans">Sans-serif (Arial)</option>
+        <option value="large">Large Print (Verdana, bold)</option>
+      </select>
+    </div>
+    <div class="setting-group" style="margin-bottom:10px">
+      <label>Word/clue list size (px)</label>
+      <input type="number" id="clueFontSizeInput" value="14" min="10" max="32" onchange="onPrintSettingChange()">
+    </div>
+    <div class="setting-group">
+      <label>Word/clue list position</label>
+      <div class="day-tabs">
+        <button class="daytab selected" id="posSideBtn" onclick="setCluePosition('side')">Beside grid</button>
+        <button class="daytab" id="posBelowBtn" onclick="setCluePosition('below')">Below grid</button>
+      </div>
+    </div>
+    <div class="fakeout-hint" id="printFitWarning" style="display:none;color:#a35b00;margin-top:8px;margin-bottom:0"></div>
+  </div>
+
   <div id="commonModeUI">
 
   <div class="fp-section">
     <div class="fp-label">Theme / Title</div>
     <input type="text" id="themeInput" class="theme-input" placeholder="e.g. Ancient Rome" maxlength="60">
-  </div>
-
-  <div class="fp-section">
-    <div class="fp-label">Font</div>
-    <div class="setting-group">
-      <label>Grid font size (px)</label>
-      <input type="number" id="fontSize" value="13" min="9" max="22">
-    </div>
   </div>
 
   </div>
@@ -12777,6 +12816,139 @@ var puzzle = null;
 var foundWords = new Set();
 var isRevealed = false;
 
+// Shared print/layout preferences — apply to whichever mode is on screen
+// (Daily, Video Game or QR Code), independent of puzzle content.
+var printSettings = {
+  orientation: 'portrait',   // 'portrait' | 'landscape'
+  cellSize: 26,              // desired grid cell size in px (fitPrintPage clamps down only if it must)
+  clueFontFamily: 'var(--body)',
+  clueFontWeight: '400',
+  clueFontSize: 14,          // px, applied to the whole word/clue list proportionally (see em-based CSS)
+  cluePosition: 'side'       // 'side' | 'below'
+};
+var lastRenderedMode = null; // which mode's renderX() last painted #puzzlePanel, so print-setting changes re-render the right one
+
+// Shared toggle-button styling: .daytab.selected only sets text color, not
+// background, so callers with a single fixed "selected" color (unlike the
+// per-difficulty tabs, which set their own color inline) need to set it too.
+function markToggleGroup(ids, activeId) {
+  ids.forEach(function(id) {
+    var btn = document.getElementById(id);
+    var active = id === activeId;
+    btn.classList.toggle('selected', active);
+    btn.style.background = active ? 'var(--ink)' : '';
+    btn.style.color = active ? '#fff' : '';
+    btn.style.borderColor = active ? 'transparent' : '';
+  });
+}
+
+function setOrientation(o) {
+  printSettings.orientation = o;
+  markToggleGroup(['orientPortraitBtn', 'orientLandscapeBtn'], o === 'landscape' ? 'orientLandscapeBtn' : 'orientPortraitBtn');
+  document.body.classList.toggle('print-landscape', o === 'landscape');
+  var styleEl = document.getElementById('pageSizeStyle');
+  if (styleEl) styleEl.textContent = '@page{size:' + (o === 'landscape' ? '11in 8.5in' : '8.5in 11in') + ';margin:0}';
+  reRenderCurrentPuzzle();
+}
+
+function setCluePosition(p) {
+  printSettings.cluePosition = p;
+  markToggleGroup(['posSideBtn', 'posBelowBtn'], p === 'below' ? 'posBelowBtn' : 'posSideBtn');
+  reRenderCurrentPuzzle();
+}
+
+function onPrintSettingChange() {
+  var csv = parseInt(document.getElementById('cellSizeInput').value, 10);
+  printSettings.cellSize = Math.max(10, Math.min(50, isNaN(csv) ? 26 : csv));
+  var fam = document.getElementById('clueFontSelect').value;
+  printSettings.clueFontFamily = fam === 'sans' ? 'Arial, Helvetica, sans-serif' : fam === 'large' ? 'Verdana, Geneva, sans-serif' : 'var(--body)';
+  printSettings.clueFontWeight = fam === 'large' ? '600' : '400';
+  var cfsv = parseInt(document.getElementById('clueFontSizeInput').value, 10);
+  printSettings.clueFontSize = Math.max(10, Math.min(32, isNaN(cfsv) ? 14 : cfsv));
+  reRenderCurrentPuzzle();
+}
+
+function reRenderCurrentPuzzle() {
+  if (lastRenderedMode !== appMode) return; // nothing built for this mode yet — settings will apply on next Generate
+  if (appMode === 'daily') renderPuzzle();
+  else if (appMode === 'vg') renderVGPuzzle();
+  else if (appMode === 'qr') qrRenderPuzzle();
+}
+
+// Shared "smart" page-fit engine used by all three modes. The grid claims
+// space first: it's sized as large as the page and the user's chosen cell
+// size allow (never below a legible floor), bounded by both the page's
+// width and height and by leaving the word/clue list a usable minimum.
+// Only the word/clue list is shrunk further — never the grid — if it still
+// doesn't fit what's left. That keeps the puzzle itself readable even when
+// a long word list, or a big grid (QR mode especially), would otherwise
+// force everything smaller together.
+function fitPrintPage(rows, cols, chromeCells, applyCellCss) {
+  var page = document.querySelector('.puzzle-page');
+  var header = document.querySelector('.page-header');
+  var preamble = document.querySelector('.page-preamble');
+  var pageBody = document.querySelector('.page-body');
+  var wordsFit = document.getElementById('wordsFit');
+  var warnEl = document.getElementById('printFitWarning');
+  if (!page || !pageBody || !rows || !cols) return;
+
+  var stacked = printSettings.cluePosition === 'below';
+  pageBody.classList.toggle('stacked', stacked);
+
+  var pcs = getComputedStyle(page);
+  var availW = page.clientWidth - parseFloat(pcs.paddingLeft || 0) - parseFloat(pcs.paddingRight || 0);
+  var usedH = (header ? header.offsetHeight + 14 : 0) + (preamble ? preamble.offsetHeight + 12 : 0);
+  var availH = page.clientHeight - parseFloat(pcs.paddingTop || 0) - parseFloat(pcs.paddingBottom || 0) - usedH;
+
+  var gap = 28, minWordsW = 220, minWordsH = 70;
+  var gridW = stacked ? availW : Math.max(160, availW - minWordsW - gap);
+  // In "below" layout the word/clue list still needs a guaranteed minimum
+  // slice of height under the grid, or the grid alone (sized to the full
+  // available height) can leave nothing — or even overflow the page once
+  // the gap between them is added back in.
+  var gridH = stacked ? Math.max(80, availH - minWordsH - gap) : availH;
+
+  var desired = printSettings.cellSize, minCS = 12;
+  var cs = Math.max(minCS, Math.min(desired, Math.floor(gridW / (cols + chromeCells)), Math.floor(gridH / (rows + chromeCells))));
+  var fs = Math.max(7, Math.round(cs * 0.58));
+  applyCellCss(cs, fs);
+
+  if (wordsFit) {
+    wordsFit.style.transform = 'none';
+    wordsFit.style.width = '';
+    wordsFit.style.fontFamily = printSettings.clueFontFamily;
+    wordsFit.style.fontWeight = printSettings.clueFontWeight;
+    wordsFit.style.fontSize = printSettings.clueFontSize + 'px';
+    if (stacked) {
+      var gridSide = document.querySelector('.grid-side');
+      var gridActualH = (gridSide ? gridSide.offsetHeight : (rows + chromeCells) * cs) + gap;
+      var remainH = availH - gridActualH; // can come out small, even negative — the scale clamp below handles that
+      var wfH = wordsFit.scrollHeight;
+      if (wfH > remainH) {
+        var s1 = Math.max(0.5, remainH / wfH);
+        wordsFit.style.transform = 'scale(' + s1 + ')';
+        wordsFit.style.width = (100 / s1) + '%';
+      }
+    } else {
+      var wfH2 = wordsFit.scrollHeight;
+      if (wfH2 > availH) {
+        var s2 = Math.max(0.5, availH / wfH2);
+        wordsFit.style.transform = 'scale(' + s2 + ')';
+        wordsFit.style.width = (100 / s2) + '%';
+      }
+    }
+  }
+
+  if (warnEl) {
+    if (cs < desired) {
+      warnEl.style.display = 'block';
+      warnEl.textContent = 'Grid cells shrunk to ' + cs + 'px to fit one page (you asked for ' + desired + 'px). Try switching orientation, moving the word list below the grid, or using fewer/shorter words.';
+    } else {
+      warnEl.style.display = 'none';
+    }
+  }
+}
+
 function selectMode(mode) {
   appMode = mode;
   ['modeDailyBtn', 'modeVGBtn', 'modeQRBtn'].forEach(function(id) {
@@ -12951,7 +13123,7 @@ function gatherConfig() {
     version: 2,
     mode: appMode,
     theme: document.getElementById('themeInput').value,
-    fontSize: parseInt(document.getElementById('fontSize').value, 10) || 13
+    cellSize: printSettings.cellSize
   };
   if (appMode === 'vg') {
     cfg.vgLevels = [];
@@ -13001,8 +13173,11 @@ function applyConfig(cfg) {
   selectMode(cfg.mode === 'vg' ? 'vg' : 'daily');
 
   if (typeof cfg.theme === 'string') document.getElementById('themeInput').value = cfg.theme.slice(0, 60);
-  var fsv = parseInt(cfg.fontSize, 10);
-  if (!isNaN(fsv)) document.getElementById('fontSize').value = Math.max(9, Math.min(22, fsv));
+  var csv = parseInt(cfg.cellSize, 10) || parseInt(cfg.fontSize, 10); // fontSize = old export field, kept as a fallback
+  if (!isNaN(csv)) {
+    document.getElementById('cellSizeInput').value = Math.max(10, Math.min(50, csv));
+    onPrintSettingChange();
+  }
 
   if (appMode === 'vg') {
     if (Array.isArray(cfg.vgLevels)) {
@@ -13152,8 +13327,8 @@ function buildPuzzle() {
   var diff = currentDiff;
   var theme = document.getElementById('themeInput').value.trim() || 'Word Search';
   var G = diff.gridSize;
-  var cs = diff.cellSize;
-  var fs = parseInt(document.getElementById('fontSize').value) || 13;
+  var cs = diff.cellSize; // placeholder — fitPrintPage() recomputes the real size at render time
+  var fs = Math.round(cs * 0.58);
 
   var rawWords = getWords();
   if (rawWords.length < 2) { showError('Please enter at least 2 words.'); return; }
@@ -13309,7 +13484,7 @@ function buildPuzzle() {
 
 function buildVGPuzzle() {
   var theme = document.getElementById('themeInput').value.trim() || 'Word Search';
-  var fs = parseInt(document.getElementById('fontSize').value) || 13;
+  var fs = Math.round(printSettings.cellSize * 0.58); // placeholder — fitPrintPage() recomputes the real size at render time
   var G = VG_BOX_SIZES[VG_BOX_SIZES.length - 1];
 
   var boxes = VG_BOX_SIZES.map(function(size) {
@@ -13402,10 +13577,10 @@ function buildVGPuzzle() {
   }
 
   // Placeholder cell size for the very first paint — renderVGPuzzle immediately
-  // recomputes the real size (fitVGPage) against the actual fixed page
+  // recomputes the real size (fitPrintPage) against the actual page
   // dimensions, so the grid renders as large as it can while the clue lists
-  // still fit beside it.
-  var cs = Math.max(11, Math.min(22, Math.round(480 / G)));
+  // still fit alongside (or below) it.
+  var cs = printSettings.cellSize;
 
   puzzle = { theme: theme, G: G, grid: _grid, placed: placedAll, placedTheme: null, decoys: decoysAll, vg: true, groups: groupsFinal, boxes: boxes, cs: cs, fs: fs };
   foundWords = new Set();
@@ -13496,7 +13671,7 @@ function renderVGPuzzle() {
       '<button class="pt-btn primary" onclick="window.print()">🖨 Print / Save PDF</button>' +
       '<button class="pt-btn" onclick="toggleReveal()" id="revealBtn">Reveal all</button>' +
       '<button class="pt-btn" onclick="resetFound()">Reset</button>' +
-      '<span class="pt-hint">Fixed 8.5×11 landscape · Print → 100%, margins None</span>' +
+      '<span class="pt-hint">' + (printSettings.orientation === 'landscape' ? '11×8.5in landscape' : '8.5×11in portrait') + ' · Print → 100%, margins None</span>' +
     '</div>' +
     '<div class="sheet-scaler" id="sheetScaler">' +
       '<div class="puzzle-page">' +
@@ -13517,52 +13692,22 @@ function renderVGPuzzle() {
     cell.addEventListener('click', function() { clickCell(cell); });
   });
 
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitVGPage(); fitScreen(); });
-  else { fitVGPage(); fitScreen(); }
+  lastRenderedMode = 'vg';
+  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(G, G, 0, applyStandardCellCss); fitScreen(); });
+  else { fitPrintPage(G, G, 0, applyStandardCellCss); fitScreen(); }
 }
 
-// Give the grid first claim on space: size its cells as large as the fixed
-// page allows (bounded by both the page's height and by leaving the clue
-// columns a usable minimum width), then only shrink the clue lists — never
-// the grid — if they still don't fit the leftover height. Legibility for the
-// person solving on paper beats perfectly using every pixel of the sheet.
-function fitVGPage() {
-  var page = document.querySelector('.puzzle-page');
-  var header = document.querySelector('.page-header');
-  var wordsFit = document.getElementById('wordsFit');
-  if (!page || !wordsFit || !puzzle || !puzzle.G) return;
-
-  var pcs = getComputedStyle(page);
-  var availW = page.clientWidth - parseFloat(pcs.paddingLeft || 0) - parseFloat(pcs.paddingRight || 0);
-  var headerH = header ? header.offsetHeight + 14 : 0;
-  var availH = page.clientHeight - parseFloat(pcs.paddingTop || 0) - parseFloat(pcs.paddingBottom || 0) - headerH;
-
-  var G = puzzle.G;
-  var gap = 28; // matches .page-body's gap
-  var minWordsW = 320; // keep the 2-column clue layout legible
-  var maxGridW = Math.max(160, availW - minWordsW - gap);
-
-  var csByHeight = Math.floor(availH / G);
-  var csByWidth = Math.floor(maxGridW / G);
-  var cs = Math.max(12, Math.min(34, csByHeight, csByWidth));
-  var fs = Math.max(9, Math.min(22, Math.round(cs * 0.58)));
-
+// Applies a computed cell size to every plain word-search .cell element
+// (Daily and Video Game modes) and stashes it on the active puzzle object —
+// shared by renderPuzzle() and renderVGPuzzle() since both use the same
+// grid markup.
+function applyStandardCellCss(cs, fs) {
   document.querySelectorAll('.cell').forEach(function(cell) {
     cell.style.width = cs + 'px';
     cell.style.height = cs + 'px';
     cell.style.fontSize = fs + 'px';
   });
-  puzzle.cs = cs; puzzle.fs = fs;
-
-  // The clue columns get whatever height is left. Only shrink them (never
-  // the grid) if they still overflow it.
-  wordsFit.style.transform = 'none'; wordsFit.style.width = '';
-  var wfH = wordsFit.scrollHeight;
-  if (wfH > availH) {
-    var s = Math.max(0.55, availH / wfH);
-    wordsFit.style.transform = 'scale(' + s + ')';
-    wordsFit.style.width = (100 / s) + '%';
-  }
+  if (puzzle) { puzzle.cs = cs; puzzle.fs = fs; }
 }
 
 function renderPuzzle() {
@@ -13665,7 +13810,7 @@ function renderPuzzle() {
       '<button class="pt-btn primary" onclick="window.print()">🖨 Print / Save PDF</button>' +
       '<button class="pt-btn" onclick="toggleReveal()" id="revealBtn">Reveal all</button>' +
       '<button class="pt-btn" onclick="resetFound()">Reset</button>' +
-      '<span class="pt-hint">Fixed 8.5×11 landscape · Print → 100%, margins None</span>' +
+      '<span class="pt-hint">' + (printSettings.orientation === 'landscape' ? '11×8.5in landscape' : '8.5×11in portrait') + ' · Print → 100%, margins None</span>' +
     '</div>' +
     '<div class="sheet-scaler" id="sheetScaler">' +
       '<div class="puzzle-page">' +
@@ -13676,7 +13821,7 @@ function renderPuzzle() {
           '</div>' +
           '<div class="page-body">' +
             '<div class="grid-side"><div class="grid-label">Word Search</div>' + gHTML + '</div>' +
-            '<div class="words-side">' + wHTML + bonusNote + sundayBlock + fakeoutNote + '</div>' +
+            '<div class="words-side"><div class="words-fit" id="wordsFit">' + wHTML + bonusNote + sundayBlock + fakeoutNote + '</div></div>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -13686,26 +13831,9 @@ function renderPuzzle() {
     cell.addEventListener('click', function() { clickCell(cell); });
   });
 
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPage(); fitScreen(); });
-  else { fitPage(); fitScreen(); }
-}
-
-// Shrink the page content so it always fits inside the fixed 8.5×11 sheet —
-// this is what guarantees the PDF is exactly one standard page every time,
-// no matter how big the grid or word list gets.
-function fitPage() {
-  var page = document.querySelector('.puzzle-page');
-  var inner = document.getElementById('pageInner');
-  if (!page || !inner) return;
-  inner.style.transform = 'none';
-  var cs = getComputedStyle(page);
-  var availW = page.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
-  var availH = page.clientHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
-  var cw = inner.scrollWidth, ch = inner.scrollHeight;
-  if (cw > 0 && ch > 0 && availW > 0 && availH > 0) {
-    var s = Math.min(1, availW / cw, availH / ch) * 0.99; // hair of safety margin
-    inner.style.transform = 'scale(' + s + ')';
-  }
+  lastRenderedMode = 'daily';
+  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(G, G, 0, applyStandardCellCss); fitScreen(); });
+  else { fitPrintPage(G, G, 0, applyStandardCellCss); fitScreen(); }
 }
 // Scale the whole fixed sheet down so the preview fits the panel width on
 // screen (reset to 1:1 for printing via the print stylesheet).
@@ -13850,6 +13978,13 @@ buildVGLevelsUI();
 for (var lv2 = 1; lv2 <= 5; lv2++) {
   for (var vk = 0; vk < 4; vk++) addVGWordRow(lv2);
 }
+
+// .daytab.selected only sets text color, not background (per-difficulty
+// tabs set their own color inline) — mode/orientation/position tabs need
+// that inline styling applied once at load too, not just on click.
+markToggleGroup(['modeDailyBtn', 'modeVGBtn', 'modeQRBtn'], 'modeDailyBtn');
+markToggleGroup(['orientPortraitBtn', 'orientLandscapeBtn'], 'orientPortraitBtn');
+markToggleGroup(['posSideBtn', 'posBelowBtn'], 'posSideBtn');
 
 window.addEventListener('resize', function() { fitScreen(); });
 
@@ -14240,11 +14375,11 @@ function qrBuildPuzzle(){
   });
   var chars = qrFillAndScrub(m, layout, words, wordCells);
 
-  var cs = Math.max(11, Math.min(26, Math.floor(720/(m.n+8))));
+  var cs = printSettings.cellSize; // placeholder — fitPrintPage() recomputes the real size at render time
   qrPuzzle = {
     text:text, title:title, ec:ec, n:m.n, dark:m.dark, chars:chars,
     placements:layout.placements, wordCells:wordCells, cellOwners:cellOwners,
-    cs:cs, fs:Math.max(6, Math.round(cs*0.58))
+    cs:cs, fs:Math.max(7, Math.round(cs*0.58))
   };
   qrFoundWords = new Set();
   qrIsRevealed = false;
@@ -14281,7 +14416,7 @@ function qrRenderPuzzle(){
       '<button class="pt-btn primary" onclick="window.print()">&#128424; Print / Save PDF</button>'+
       '<button class="pt-btn" onclick="qrToggleReveal()" id="revealBtn">Reveal solution</button>'+
       '<button class="pt-btn" onclick="qrResetFound()">Reset</button>'+
-      '<span class="pt-hint">Print &rarr; enable &ldquo;background graphics&rdquo; so the black squares print</span>'+
+      '<span class="pt-hint">'+(printSettings.orientation === 'landscape' ? '11&times;8.5in landscape' : '8.5&times;11in portrait')+' &middot; enable &ldquo;background graphics&rdquo; when printing so the black squares print</span>'+
     '</div>'+
     '<div class="verify-strip" id="verifyStrip"><span class="vbadge warn">checking scannability&hellip;</span></div>'+
     '<div class="complete-banner" id="completeBanner">&#127881; All words found &mdash; the code is complete. Point a phone camera at the grid!</div>'+
@@ -14292,7 +14427,7 @@ function qrRenderPuzzle(){
             '<div class="page-title">'+escHTML(p.title)+' <span class="diff-badge" style="color:var(--ink);background:#eee;border:.5px solid #ccc">QR Code Mode</span></div>'+
             '<div class="page-meta">'+n+'&times;'+n+' &middot; '+p.placements.length+' words &middot; '+letterCount+' missing squares &middot; EC '+p.ec+'</div>'+
           '</div>'+
-          '<div class="instructions"><strong>This word search is a QR code with missing pieces.</strong>'+
+          '<div class="instructions page-preamble"><strong>This word search is a QR code with missing pieces.</strong>'+
             '<ol>'+
             '<li>Find every listed word in the white squares &mdash; horizontal, vertical or diagonal, forwards or backwards.</li>'+
             '<li>Shade each found word’s squares <em>completely</em> with a black marker or dark pen.</li>'+
@@ -14300,10 +14435,10 @@ function qrRenderPuzzle(){
             '</ol>'+
             'The solid black squares are already done for you. Shade only real finds &mdash; stray marks can break the code.</div>'+
           '<div class="page-body">'+
-            '<div class="grid-side"><div class="grid-label">QR Code</div><div class="quiet-zone" style="padding:'+quietPad+'px">'+gHTML+'</div>'+
+            '<div class="grid-side"><div class="grid-label">QR Code</div><div class="quiet-zone" id="qrQuietZone" style="padding:'+quietPad+'px">'+gHTML+'</div>'+
               '<div class="page-foot">solve &middot; shade &middot; scan</div>'+
             '</div>'+
-            '<div class="words-side">'+chips+'</div>'+
+            '<div class="words-side"><div class="words-fit" id="wordsFit">'+chips+'</div></div>'+
           '</div>'+
         '</div>'+
       '</div>'+
@@ -14313,8 +14448,20 @@ function qrRenderPuzzle(){
     cell.addEventListener('click', function(){ qrClickCell(+cell.dataset.r, +cell.dataset.c); });
   });
 
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPage(); fitScreen(); });
-  else { fitPage(); fitScreen(); }
+  lastRenderedMode = 'qr';
+  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(n, n, 8, applyQrCellCss); fitScreen(); });
+  else { fitPrintPage(n, n, 8, applyQrCellCss); fitScreen(); }
+}
+
+// Applies a computed cell size to the QR grid's CSS vars (--cs/--fs, read
+// by every .qcell) and to its quiet-zone margin, which scales with cell
+// size to preserve the scanner's required white border proportionally.
+function applyQrCellCss(cs, fs) {
+  var grid = document.querySelector('.qr-grid');
+  if (grid) { grid.style.setProperty('--cs', cs + 'px'); grid.style.setProperty('--fs', fs + 'px'); }
+  var qz = document.getElementById('qrQuietZone');
+  if (qz) qz.style.padding = (cs * 4) + 'px';
+  if (qrPuzzle) { qrPuzzle.cs = cs; qrPuzzle.fs = fs; }
 }
 
 function qrShadePlacement(idx, revealMode){
