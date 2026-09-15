@@ -14481,7 +14481,10 @@ function qrRenderPuzzle(){
   });
   wordsHTML += '</div>';
 
-  var quietPad = p.cs*4;
+  // 2 modules of white margin around the code — half the ISO-recommended
+  // 4-module "quiet zone", verified against the scan checker below to still
+  // scan reliably once solved, in exchange for a visibly bigger grid.
+  var quietPad = p.cs*2;
   var letterCount = Object.keys(p.wordCells).length;
 
   document.getElementById('puzzlePanel').innerHTML =
@@ -14524,8 +14527,8 @@ function qrRenderPuzzle(){
   lastRenderedMode = 'qr';
   // Plain (optionally numbered) word chips — needs less reserved width than
   // VG's 2-column clue layout, so the grid can claim more of the page.
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(n, n, 8, applyQrCellCss, 150); fitScreen(); });
-  else { fitPrintPage(n, n, 8, applyQrCellCss, 150); fitScreen(); }
+  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(n, n, 4, applyQrCellCss, 110); fitScreen(); });
+  else { fitPrintPage(n, n, 4, applyQrCellCss, 110); fitScreen(); }
 }
 
 // Applies a computed cell size to the QR grid's CSS vars (--cs/--fs, read
@@ -14535,7 +14538,7 @@ function applyQrCellCss(cs, fs) {
   var grid = document.querySelector('.qr-grid');
   if (grid) { grid.style.setProperty('--cs', cs + 'px'); grid.style.setProperty('--fs', fs + 'px'); }
   var qz = document.getElementById('qrQuietZone');
-  if (qz) qz.style.padding = (cs * 4) + 'px';
+  if (qz) qz.style.padding = (cs * 2) + 'px';
   if (qrPuzzle) { qrPuzzle.cs = cs; qrPuzzle.fs = fs; }
 }
 
