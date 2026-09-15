@@ -318,7 +318,7 @@ body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
         <label>List style</label>
         <div class="day-tabs">
           <button class="daytab selected" id="qrListWordsBtn" onclick="setQrListMode('words')">Word list</button>
-          <button class="daytab" id="qrListCluesBtn" onclick="setQrListMode('clues')">Numbered clues</button>
+          <button class="daytab" id="qrListCluesBtn" onclick="setQrListMode('numbered')">Numbered</button>
         </div>
       </div>
       <div class="word-entries" id="qrWordEntries"></div>
@@ -13156,8 +13156,8 @@ function gatherConfig() {
     cfg.qrTitle = document.getElementById('qrTitleInput').value;
     cfg.qrEc = document.getElementById('qrEcSelect').value;
     cfg.qrListMode = qrListMode;
-    cfg.words = Array.from(document.querySelectorAll('#qrWordEntries .word-entry')).map(function(row) {
-      return { word: row.querySelector('.w-word').value, clue: row.querySelector('.w-clue').value };
+    cfg.words = Array.from(document.querySelectorAll('#qrWordEntries .w-word')).map(function(inp) {
+      return inp.value;
     });
   } else {
     cfg.day = currentDiff.id;
@@ -13179,7 +13179,7 @@ function exportConfig() {
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
   var count = cfg.mode === 'vg'
     ? cfg.vgLevels.reduce(function(n, lvl) { return n + lvl.filter(function(w) { return w.word.trim(); }).length; }, 0)
-    : cfg.words.filter(function(w) { return w.word.trim(); }).length;
+    : cfg.words.filter(function(w) { return (typeof w === 'string' ? w : w.word).trim(); }).length;
   showFlash('Exported ' + count + ' words and settings to ' + slug + '.json', true);
 }
 function importConfig(input) {
@@ -13211,15 +13211,13 @@ function applyConfig(cfg) {
     if (typeof cfg.qrTitle === 'string') document.getElementById('qrTitleInput').value = cfg.qrTitle.slice(0, 60);
     else if (typeof cfg.theme === 'string') document.getElementById('qrTitleInput').value = cfg.theme.slice(0, 60);
     if (['L', 'M', 'Q', 'H'].indexOf(cfg.qrEc) !== -1) document.getElementById('qrEcSelect').value = cfg.qrEc;
-    setQrListMode(cfg.qrListMode === 'clues' ? 'clues' : 'words');
+    setQrListMode(cfg.qrListMode === 'numbered' || cfg.qrListMode === 'clues' ? 'numbered' : 'words');
     if (Array.isArray(cfg.words)) {
       document.getElementById('qrWordEntries').innerHTML = '';
       cfg.words.forEach(function(item) {
-        var word = '', clue = '';
-        if (typeof item === 'string') { word = item; }
-        else if (item && typeof item === 'object') { word = item.word || ''; clue = item.clue || ''; }
+        var word = typeof item === 'string' ? item : (item && item.word) || '';
         word = String(word).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 20);
-        qrAddWordRow(word, String(clue));
+        qrAddWordRow(word);
       });
       if (!document.querySelectorAll('#qrWordEntries .word-entry').length) qrAddWordRow();
       qrRenumberRows();
@@ -14156,28 +14154,24 @@ function qrCkey(r,c){ return r+','+c; }
 function qrRev(s){ return s.split('').reverse().join(''); }
 
 // ── word entry UI ──
-var qrListMode = 'words'; // 'words' | 'clues'
+var qrListMode = 'words'; // 'words' | 'numbered' — both just display the plain word list, numbered or not
 
 function setQrListMode(mode){
   qrListMode = mode;
-  markToggleGroup(['qrListWordsBtn', 'qrListCluesBtn'], mode === 'clues' ? 'qrListCluesBtn' : 'qrListWordsBtn');
-  document.querySelectorAll('#qrWordEntries .word-entry').forEach(function(row){
-    row.classList.toggle('no-clue', mode !== 'clues');
-  });
+  markToggleGroup(['qrListWordsBtn', 'qrListCluesBtn'], mode === 'numbered' ? 'qrListCluesBtn' : 'qrListWordsBtn');
   if (qrPuzzle) { qrPuzzle.listMode = mode; qrRenderPuzzle(); }
 }
 
-function qrAddWordRow(word, clue){
-  word = word || ''; clue = clue || '';
+function qrAddWordRow(word){
+  word = word || '';
   var container = document.getElementById('qrWordEntries');
   var n = container.children.length+1;
   var div = document.createElement('div');
-  div.className = 'word-entry' + (qrListMode === 'clues' ? '' : ' no-clue');
+  div.className = 'word-entry no-clue';
   div.innerHTML =
     '<span class="entry-num">'+n+'</span>'+
     '<input class="w-word" type="text" maxlength="20" value="'+escHTML(word)+'" placeholder="WORD" '+
       'oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,\'\')">'+
-    '<input class="w-clue" type="text" maxlength="120" value="'+escHTML(clue)+'" placeholder="Clue text&hellip;">'+
     '<button class="del-btn" onclick="qrRemoveRow(this)" title="Remove">&times;</button>';
   container.appendChild(div);
   qrRenumberRows();
@@ -14188,12 +14182,12 @@ function qrRenumberRows(){
 }
 function qrGetWords(){
   var seen = {};
-  return Array.from(document.querySelectorAll('#qrWordEntries .word-entry')).map(function(row){
-    return { word: row.querySelector('.w-word').value.trim().toUpperCase(), clue: row.querySelector('.w-clue').value.trim() };
-  }).filter(function(w){
-    if(w.word.length < 3 || seen[w.word]) return false;
-    seen[w.word] = true; return true;
-  });
+  return Array.from(document.querySelectorAll('#qrWordEntries .word-entry .w-word'))
+    .map(function(inp){ return inp.value.trim().toUpperCase(); })
+    .filter(function(w){
+      if(w.length < 3 || seen[w]) return false;
+      seen[w] = true; return true;
+    });
 }
 
 // ── QR matrix ──
@@ -14383,11 +14377,8 @@ function qrBuildPuzzle(){
   if(!text){ showError('Enter a message or link to encode in the QR code.'); return; }
   var title = document.getElementById('qrTitleInput').value.trim() || 'QR Word Search';
   var ec = document.getElementById('qrEcSelect').value;
-  var wordObjs = qrGetWords();
-  if(wordObjs.length < 2){ showError('Enter at least 2 words of 3+ letters (4+ words recommended).'); return; }
-  var words = wordObjs.map(function(w){ return w.word; });
-  var clueMap = {};
-  wordObjs.forEach(function(w){ clueMap[w.word] = w.clue; });
+  var words = qrGetWords();
+  if(words.length < 2){ showError('Enter at least 2 words of 3+ letters (4+ words recommended).'); return; }
   for(var a=0;a<words.length;a++) for(var b=0;b<words.length;b++){
     if(a!==b && (words[a].indexOf(words[b])!==-1 || qrRev(words[a]).indexOf(words[b])!==-1)){
       showError('"'+words[b]+'" is contained inside "'+words[a]+'" — remove one of them.');
@@ -14443,7 +14434,6 @@ function qrBuildPuzzle(){
 
   var wordCells = {}, cellOwners = {};
   layout.placements.forEach(function(p, idx){
-    p.clue = clueMap[p.word] || '';
     p.cells.forEach(function(cl){
       var k = qrCkey(cl[0], cl[1]);
       wordCells[k] = true;
@@ -14479,21 +14469,12 @@ function qrRenderPuzzle(){
   }
   gHTML += '</div>';
 
-  var wordsHTML;
-  if(p.listMode === 'clues'){
-    var clueOrder = shuffle(p.placements.map(function(pl, idx){ return { idx:idx, word:pl.word, clue:pl.clue || '('+pl.word.length+' letters)' }; }));
-    wordsHTML = '<div class="sec-label">Clues &mdash; find &amp; shade each answer</div><div class="clues-list">';
-    clueOrder.forEach(function(item, ci){
-      wordsHTML += '<div class="clue-item" id="qr-ci-'+item.idx+'"><span class="clue-num">'+(ci+1)+'.</span> '+escHTML(item.clue)+'<span class="clue-letters">'+item.word.length+' ltrs</span><div class="clue-answer">&rarr; '+item.word+'</div></div>';
-    });
-    wordsHTML += '</div>';
-  } else {
-    wordsHTML = '<div class="sec-label">Find &amp; shade these words</div><div class="word-chips">';
-    p.placements.forEach(function(pl, idx){
-      wordsHTML += '<span class="chip" id="qr-chip-'+idx+'">'+pl.word+'</span>';
-    });
-    wordsHTML += '</div>';
-  }
+  var numbered = p.listMode === 'numbered';
+  var wordsHTML = '<div class="sec-label">Find &amp; shade these words</div><div class="word-chips">';
+  p.placements.forEach(function(pl, idx){
+    wordsHTML += '<span class="chip" id="qr-chip-'+idx+'">'+(numbered ? (idx+1)+'. ' : '')+pl.word+'</span>';
+  });
+  wordsHTML += '</div>';
 
   var quietPad = p.cs*4;
   var letterCount = Object.keys(p.wordCells).length;
@@ -14559,8 +14540,6 @@ function qrShadePlacement(idx, revealMode){
   qrFoundWords.add(idx);
   var ch = document.getElementById('qr-chip-'+idx);
   if(ch) ch.classList.add('found-chip');
-  var ci = document.getElementById('qr-ci-'+idx);
-  if(ci){ ci.classList.add('found-clue'); if(revealMode) ci.classList.add('revealed-clue'); }
 }
 
 function qrClickCell(r, c){
@@ -14597,7 +14576,6 @@ function qrResetFound(){
   document.querySelectorAll('.qcell.shaded').forEach(function(el){ el.classList.remove('shaded'); });
   document.querySelectorAll('.qcell.revealed').forEach(function(el){ el.classList.remove('revealed'); });
   document.querySelectorAll('.found-chip').forEach(function(el){ el.classList.remove('found-chip'); });
-  document.querySelectorAll('#wordsFit .clue-item').forEach(function(el){ el.classList.remove('found-clue', 'revealed-clue'); });
   document.getElementById('completeBanner').classList.remove('show');
   qrFoundWords = new Set();
 }
