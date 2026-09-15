@@ -233,8 +233,8 @@ body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
     <div class="setting-group">
       <label>Word/clue list position</label>
       <div class="day-tabs">
-        <button class="daytab selected" id="posSideBtn" onclick="setCluePosition('side')">Beside grid</button>
-        <button class="daytab" id="posBelowBtn" onclick="setCluePosition('below')">Below grid</button>
+        <button class="daytab" id="posSideBtn" onclick="setCluePosition('side')">Beside grid</button>
+        <button class="daytab selected" id="posBelowBtn" onclick="setCluePosition('below')">Below grid</button>
       </div>
     </div>
     <div class="fakeout-hint" id="printFitWarning" style="display:none;color:#a35b00;margin-top:8px;margin-bottom:0"></div>
@@ -12841,7 +12841,10 @@ var printSettings = {
   clueFontFamily: 'var(--body)',
   clueFontWeight: '400',
   clueFontSize: 14,          // px, applied to the whole word/clue list proportionally (see em-based CSS)
-  cluePosition: 'side'       // 'side' | 'below'
+  cluePosition: 'below'      // 'side' | 'below' — below defaults on: a square-ish grid on a tall
+                             // portrait page renders substantially bigger with the full page width
+                             // to itself than sharing a row with the word/clue column (VG mode
+                             // nearly doubles its cell size this way)
 };
 var lastRenderedMode = null; // which mode's renderX() last painted #puzzlePanel, so print-setting changes re-render the right one
 
@@ -14033,7 +14036,7 @@ for (var lv2 = 1; lv2 <= 5; lv2++) {
 // that inline styling applied once at load too, not just on click.
 markToggleGroup(['modeDailyBtn', 'modeVGBtn', 'modeQRBtn'], 'modeDailyBtn');
 markToggleGroup(['orientPortraitBtn', 'orientLandscapeBtn'], 'orientPortraitBtn');
-markToggleGroup(['posSideBtn', 'posBelowBtn'], 'posSideBtn');
+markToggleGroup(['posSideBtn', 'posBelowBtn'], 'posBelowBtn');
 
 window.addEventListener('resize', function() { fitScreen(); });
 
