@@ -12922,6 +12922,18 @@ function reRenderCurrentPuzzle() {
 // doesn't fit what's left. That keeps the puzzle itself readable even when
 // a long word list, or a big grid (QR mode especially), would otherwise
 // force everything smaller together.
+//
+// Runs the given fit function once via rAF, then once more shortly after.
+// A big grid's DOM (thousands of cells) and the page's web fonts (loaded
+// async via @import) can both still be settling for ~100ms+ after the
+// first pass — measured heights shrink as they finish — which left the
+// first pass's cell/font sizes smaller than the content actually needs.
+// The follow-up re-measures against the settled layout and corrects it.
+function scheduleFit(fn) {
+  function run() { fn(); setTimeout(fn, 150); }
+  if (window.requestAnimationFrame) requestAnimationFrame(run);
+  else run();
+}
 function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
   var page = document.querySelector('.puzzle-page');
   var header = document.querySelector('.page-header');
@@ -12970,22 +12982,24 @@ function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
   applyCellCss(cs, fs);
 
   if (wordsFit) {
+    var targetH;
     if (stacked) {
       var gridSide = document.querySelector('.grid-side');
       var gridActualH = (gridSide ? gridSide.offsetHeight : (rows + chromeCells) * cs) + gap;
-      var remainH = availH - gridActualH; // can come out small, even negative — the scale clamp below handles that
-      var wfH = wordsFit.scrollHeight;
-      if (wfH > remainH) {
-        var s1 = Math.max(0.5, remainH / wfH);
-        wordsFit.style.transform = 'scale(' + s1 + ')';
-        wordsFit.style.width = (100 / s1) + '%';
-      }
+      targetH = availH - gridActualH; // can come out small, even negative — the loop below floors it out
     } else {
-      var wfH2 = wordsFit.scrollHeight;
-      if (wfH2 > availH) {
-        var s2 = Math.max(0.5, availH / wfH2);
-        wordsFit.style.transform = 'scale(' + s2 + ')';
-        wordsFit.style.width = (100 / s2) + '%';
+      targetH = availH;
+    }
+    // Shrink by real font-size, not transform: a transform only repaints —
+    // the element keeps its full pre-transform height in the layout box, so
+    // the safety pass right after this would still measure the *unshrunk*
+    // height and conclude the page overflows more than it really does,
+    // stealing size from the grid to fix a gap that was already closed.
+    if (targetH > 0 && wordsFit.scrollHeight > targetH) {
+      var wfFs = printSettings.clueFontSize;
+      for (var wpass = 0; wpass < 25 && wordsFit.scrollHeight > targetH && wfFs > 7; wpass++) {
+        wfFs -= 1;
+        wordsFit.style.fontSize = wfFs + 'px';
       }
     }
   }
@@ -13807,8 +13821,7 @@ function renderVGPuzzle() {
   lastRenderedMode = 'vg';
   // VG's word/clue lists lay out in 2 columns (see groupsHTML above), so they
   // need more reserved width than Daily/QR's single-column chip list.
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(G, G, 0, applyStandardCellCss, 320); fitScreen(); });
-  else { fitPrintPage(G, G, 0, applyStandardCellCss, 320); fitScreen(); }
+  scheduleFit(function() { fitPrintPage(G, G, 0, applyStandardCellCss, 320); fitScreen(); });
 }
 
 // Applies a computed cell size to every plain word-search .cell element
@@ -13948,8 +13961,7 @@ function renderPuzzle() {
   lastRenderedMode = 'daily';
   // Single-column word chips or clue list — needs less reserved width than
   // VG's 2-column layout, so the grid can claim more of the page.
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(G, G, 0, applyStandardCellCss, 170); fitScreen(); });
-  else { fitPrintPage(G, G, 0, applyStandardCellCss, 170); fitScreen(); }
+  scheduleFit(function() { fitPrintPage(G, G, 0, applyStandardCellCss, 170); fitScreen(); });
 }
 // Scale the whole fixed sheet down so the preview fits the panel width on
 // screen (reset to 1:1 for printing via the print stylesheet).
@@ -14607,8 +14619,7 @@ function qrRenderPuzzle(){
   lastRenderedMode = 'qr';
   // Plain (optionally numbered) word chips — needs less reserved width than
   // VG's 2-column clue layout, so the grid can claim more of the page.
-  if (window.requestAnimationFrame) requestAnimationFrame(function() { fitPrintPage(n, n, 4, applyQrCellCss, 110); fitScreen(); });
-  else { fitPrintPage(n, n, 4, applyQrCellCss, 110); fitScreen(); }
+  scheduleFit(function() { fitPrintPage(n, n, 4, applyQrCellCss, 110); fitScreen(); });
 }
 
 // Applies a computed cell size to the QR grid's CSS vars (--cs/--fs, read
