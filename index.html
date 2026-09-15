@@ -324,6 +324,7 @@ body.print-landscape .puzzle-page{width:11in;height:8.5in;padding:0.35in}
       <div class="word-entries" id="qrWordEntries"></div>
       <button class="add-word-btn" onclick="qrAddWordRow()">+ add another word</button>
       <div class="fakeout-hint">Words are hidden only along the QR code's missing dark squares &mdash; the code grows to make room for longer or more words, but very long words may still not fit. More total letters = a more broken, safer unsolved code.</div>
+      <div class="fakeout-hint">Long, straight runs of dark squares are scarce in a QR code, so size grows faster than word count alone would suggest &mdash; 6&ndash;10 short/medium words print largest and most readable; 15+ words, or several 12+ letter words, can force a very large grid. A lower error-correction level (L or M) usually shrinks it too.</div>
     </div>
 
   </div>
@@ -12920,7 +12921,23 @@ function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
   var usedH = (header ? header.offsetHeight + 14 : 0) + (preamble ? preamble.offsetHeight + 12 : 0);
   var availH = page.clientHeight - parseFloat(pcs.paddingTop || 0) - parseFloat(pcs.paddingBottom || 0) - usedH;
 
-  var gap = 28, minWordsH = 70;
+  // Apply the clue font settings and measure the word/clue list's real,
+  // unconstrained height *before* budgeting space for it below — a flat
+  // guess badly undersizes the reservation for a long list (20 numbered
+  // words need far more room than a 4-word chip row), which is what let
+  // the list overflow the page instead of just fitting more snugly.
+  if (wordsFit) {
+    wordsFit.style.transform = 'none';
+    wordsFit.style.width = '';
+    wordsFit.style.fontFamily = printSettings.clueFontFamily;
+    wordsFit.style.fontWeight = printSettings.clueFontWeight;
+    wordsFit.style.fontSize = printSettings.clueFontSize + 'px';
+  }
+
+  var gap = 28;
+  // Reserve what the list actually needs, capped so an extreme list still
+  // leaves the grid the majority of the page rather than being crowded out.
+  var minWordsH = wordsFit ? Math.max(50, Math.min(wordsFit.scrollHeight, availH * 0.45)) : 70;
   if (minWordsW === undefined) minWordsW = 220;
   var gridW = stacked ? availW : Math.max(160, availW - minWordsW - gap);
   // In "below" layout the word/clue list still needs a guaranteed minimum
@@ -12935,11 +12952,6 @@ function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
   applyCellCss(cs, fs);
 
   if (wordsFit) {
-    wordsFit.style.transform = 'none';
-    wordsFit.style.width = '';
-    wordsFit.style.fontFamily = printSettings.clueFontFamily;
-    wordsFit.style.fontWeight = printSettings.clueFontWeight;
-    wordsFit.style.fontSize = printSettings.clueFontSize + 'px';
     if (stacked) {
       var gridSide = document.querySelector('.grid-side');
       var gridActualH = (gridSide ? gridSide.offsetHeight : (rows + chromeCells) * cs) + gap;
@@ -12960,8 +12972,32 @@ function fitPrintPage(rows, cols, chromeCells, applyCellCss, minWordsW) {
     }
   }
 
+  // Final safety net: the budgeting above is an estimate (measured before
+  // fonts/wrapping fully settle), so it can still leave the page a little
+  // taller than it has room for — especially for a large grid with a long
+  // word list, where every earlier reservation is already near its limit.
+  // Rather than let .puzzle-page's overflow:hidden silently clip the
+  // bottom of the word/clue list (which is what was happening), do one
+  // last measure-and-correct pass. No floor here on purpose: a page that's
+  // uniformly smaller but complete is always better than one with content
+  // missing off the edge.
+  var pageInner = document.getElementById('pageInner');
+  var safetyScale = 1;
+  if (pageInner) {
+    pageInner.style.transform = 'none';
+    var innerAvailH = page.clientHeight - parseFloat(pcs.paddingTop || 0) - parseFloat(pcs.paddingBottom || 0);
+    var overflowPx = pageInner.scrollHeight - innerAvailH;
+    if (overflowPx > 1) {
+      safetyScale = Math.max(0.25, innerAvailH / pageInner.scrollHeight);
+      pageInner.style.transform = 'scale(' + safetyScale + ')';
+    }
+  }
+
   if (warnEl) {
-    if (cs < desired) {
+    if (safetyScale < 0.97) {
+      warnEl.style.display = 'block';
+      warnEl.textContent = 'This puzzle (' + rows + '×' + cols + ' grid, plus the word list) is too big for one page at full size, so everything was shrunk about ' + Math.round((1 - safetyScale) * 100) + '% to fit. For a bigger, more readable result: use fewer or shorter words, a lower error-correction level, or landscape orientation.';
+    } else if (cs < desired) {
       warnEl.style.display = 'block';
       warnEl.textContent = 'Grid cells shrunk to ' + cs + 'px to fit one page (you asked for ' + desired + 'px). Try switching orientation, moving the word list below the grid, or using fewer/shorter words.';
     } else {
@@ -13896,10 +13932,15 @@ function fitScreen() {
   if (!page || !panel) return;
   scaler.style.transform = 'none'; scaler.style.width = ''; scaler.style.height = '';
   var ps = getComputedStyle(panel);
-  var avail = panel.clientWidth - parseFloat(ps.paddingLeft || 0) - parseFloat(ps.paddingRight || 0);
+  var availW = panel.clientWidth - parseFloat(ps.paddingLeft || 0) - parseFloat(ps.paddingRight || 0);
+  // Also cap by the panel's visible height, not just its width — otherwise a
+  // tall page (portrait, or a big QR grid) can render taller than the
+  // browser window without shrinking, so the word/clue list at the bottom
+  // is only reachable by scrolling and looks like it's missing entirely.
+  var availH = window.innerHeight - panel.getBoundingClientRect().top - 24;
   var pw = page.offsetWidth, ph = page.offsetHeight;
-  if (pw > 0 && avail > 0) {
-    var s = Math.min(1, avail / pw);
+  if (pw > 0 && ph > 0 && availW > 0 && availH > 0) {
+    var s = Math.min(1, availW / pw, availH / ph);
     scaler.style.transform = 'scale(' + s + ')';
     scaler.style.width = (pw * s) + 'px';
     scaler.style.height = (ph * s) + 'px';
