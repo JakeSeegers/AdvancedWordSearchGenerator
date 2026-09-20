@@ -13485,8 +13485,16 @@ function buildPuzzle() {
   var rawWords = getWords();
   if (rawWords.length < 2) { showError('Please enter at least 2 words.'); return; }
 
-  var toolong = rawWords.filter(function(w) { return w.word.length > G - 2; });
-  if (toolong.length) { showError('"' + toolong[0].word + '" is too long for ' + diff.name + '\'s ' + G + '×' + G + ' grid.'); return; }
+  // Each day's gridSize is a *starting point*, not a hard cap — a longer or
+  // fuller word list than that size was designed for grows the grid instead
+  // of just failing, the same way QR mode grows to fit its word list.
+  var maxG = Math.max(diff.gridSize, 45);
+  var longestWord = rawWords.reduce(function(m, w) { return Math.max(m, w.word.length); }, 0);
+  if (longestWord > maxG - 2) {
+    var longest = rawWords.filter(function(w) { return w.word.length === longestWord; })[0];
+    showError('"' + longest.word + '" is too long to fit even at ' + maxG + '×' + maxG + ' — shorten it.');
+    return;
+  }
 
   // Derive hidden theme word from title (letters only, up to 14 chars)
   var themeWord = '';
@@ -13500,40 +13508,45 @@ function buildPuzzle() {
 
   var placed = null, placedTheme = null;
 
-  for (var attempt = 0; attempt < 20; attempt++) {
-    // Reset shared grid state
-    _G = G;
-    _grid = [];
-    for (var i = 0; i < G; i++) {
-      _grid.push([]);
-      for (var j = 0; j < G; j++) _grid[i].push('');
+  outer:
+  for (G = diff.gridSize; G <= maxG; G++) {
+    if (rawWords.some(function(w) { return w.word.length > G - 2; })) continue; // too small to even hold the longest word yet
+
+    for (var attempt = 0; attempt < 15; attempt++) {
+      // Reset shared grid state
+      _G = G;
+      _grid = [];
+      for (var i = 0; i < G; i++) {
+        _grid.push([]);
+        for (var j = 0; j < G; j++) _grid[i].push('');
+      }
+
+      var tmpPlaced = [];
+      var sorted = rawWords.slice().sort(function(a, b) { return b.word.length - a.word.length; });
+      var allOk = true;
+
+      for (var wi = 0; wi < sorted.length; wi++) {
+        var result = _tryPlace(sorted[wi].word, sorted[wi].clue, false, useDirs, all8);
+        if (!result) { allOk = false; break; }
+        tmpPlaced.push(result);
+      }
+
+      if (!allOk) continue;
+
+      // Try to place hidden theme word (best effort — doesn't abort)
+      var tmpTheme = null;
+      if (themeWord && themeWord.length >= 3) {
+        tmpTheme = _tryPlace(themeWord, '', true, useDirs, all8);
+      }
+
+      placed = tmpPlaced;
+      placedTheme = tmpTheme;
+      break outer;
     }
-
-    var tmpPlaced = [];
-    var sorted = rawWords.slice().sort(function(a, b) { return b.word.length - a.word.length; });
-    var allOk = true;
-
-    for (var wi = 0; wi < sorted.length; wi++) {
-      var result = _tryPlace(sorted[wi].word, sorted[wi].clue, false, useDirs, all8);
-      if (!result) { allOk = false; break; }
-      tmpPlaced.push(result);
-    }
-
-    if (!allOk) continue;
-
-    // Try to place hidden theme word (best effort — doesn't abort)
-    var tmpTheme = null;
-    if (themeWord && themeWord.length >= 3) {
-      tmpTheme = _tryPlace(themeWord, '', true, useDirs, all8);
-    }
-
-    placed = tmpPlaced;
-    placedTheme = tmpTheme;
-    break;
   }
 
   if (!placed || placed.length < rawWords.length) {
-    showError('Could not fit all words. Try a larger grid difficulty or shorter words.');
+    showError('Could not fit all words even after growing the grid to ' + maxG + '×' + maxG + '. Try fewer or shorter words.');
     return;
   }
 
