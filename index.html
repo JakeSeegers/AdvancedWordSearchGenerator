@@ -12814,6 +12814,12 @@ var DIFFS = [
     desc:'Word list shown plus hidden theme bonus. Four fonts, wobble, letter bias. Also includes a font-based secret puzzle: a word you supply is encoded using two special fonts — collect and unscramble the clue letters to find it.',
     dirs:8, wobble:12, bias:true, fonts:4, listMode:'words', hiddenTheme:true,
     gridSize:18, cellSize:24, showClue:false
+  },
+  {
+    id:8, name:'Monday (Hard)', color:'#0b3d63',
+    desc:'Monday\'s plain word list, built with Sunday\'s toughest grid mechanics: 18×18 grid, four alternating fonts, heavy letter wobble, and letter-bias camouflage. Doppelganger decoys are woven into the grid to mislead you, same as Saturday. No hidden theme word and no secret font puzzle — those stay exclusive to Sunday.',
+    dirs:8, wobble:12, bias:true, fonts:4, listMode:'words', decoys:[2,3], hiddenTheme:false,
+    gridSize:18, cellSize:24, showClue:false
   }
 ];
 
