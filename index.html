@@ -14638,6 +14638,7 @@ function qrRenderPuzzle(){
         '<div class="page-inner" id="pageInner">'+
           '<div class="page-header">'+
             '<div class="page-title">'+escHTML(p.title)+' <span class="diff-badge" style="color:var(--ink);background:#eee;border:.5px solid #ccc">QR Code Mode</span></div>'+
+            '<div class="page-meta">'+n+'&times;'+n+' &middot; '+p.placements.length+' words &middot; '+letterCount+' missing squares &middot; EC '+p.ec+'</div>'+
           '</div>'+
           '<div class="instructions page-preamble compact">Find each word below (any direction), shade its squares in completely, then scan when all are found &mdash; black squares are already done; stray marks can break the code.</div>'+
           '<div class="page-body">'+
